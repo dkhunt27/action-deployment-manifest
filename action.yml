@@ -1,0 +1,11 @@
+name: Deployment Manifest 
+description: git action that maintains a deployment manifest of the matrix of environments, projects, versions, and statuses
+author: dkhunt27
+
+branding:
+  icon: command
+  color: blue
+
+runs:
+  using: node24
+  main: dist/index.js
