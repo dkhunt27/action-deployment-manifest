@@ -1,6 +1,6 @@
 # Action Deployment Manifest
 
-This git action maintains a deployment manifest of the matrix of environments, projects, versions, and statuses
+This git action maintains a deployment manifest of the matrix of environments, apps, versions, and statuses
 
 ## Test your action locally
 
