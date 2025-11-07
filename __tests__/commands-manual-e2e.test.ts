@@ -19,7 +19,7 @@ describe('commands manual test harness', () => {
     process.env = origEnv
   })
 
-  describe.skip('addNewDeployable', () => {
+  describe('addNewDeployable', () => {
     let params: {
       deployableTable: string
       version: string
@@ -29,8 +29,8 @@ describe('commands manual test harness', () => {
     beforeEach(() => {
       params = {
         deployableTable: 'dev-dhunt-pipelines-deployable',
-        version: '1.0.0',
-        appList: ['app1', 'app2'],
+        version: '1.2.0',
+        appList: ['app1'],
         actor: 'test-user'
       }
     })
@@ -38,6 +38,71 @@ describe('commands manual test harness', () => {
     test('should successfully add new deployable when no existing records', async () => {
       // need to init
       await expect(addNewDeployable(params)).resolves.toBeUndefined()
+    })
+  })
+
+  describe('getDeployableList', () => {
+    let params: {
+      deployableTable: string
+      version: string
+      appList?: string[]
+    }
+    beforeEach(() => {
+      params = {
+        deployableTable: 'dev-dhunt-pipelines-deployable',
+        version: '1.0.0'
+      }
+    })
+
+    test('should successfully get versioned deployable list', async () => {
+      await expect(getDeployableList(params)).resolves.toEqual([
+        {
+          app: 'app1',
+          createdBy: 'test-user',
+          createdDate: '2025-11-06T21:36:16.852Z',
+          id: '1.0.0|app1',
+          status: 'available',
+          version: '1.0.0'
+        },
+        {
+          app: 'app2',
+          createdBy: 'test-user',
+          createdDate: '2025-11-06T21:36:16.852Z',
+          id: '1.0.0|app2',
+          status: 'available',
+          version: '1.0.0'
+        }
+      ])
+    })
+
+    test('should successfully get versioned restricted deployable list', async () => {
+      params.appList = ['app1']
+
+      await expect(getDeployableList(params)).resolves.toEqual([
+        {
+          app: 'app1',
+          createdBy: 'test-user',
+          createdDate: '2025-11-06T21:36:16.852Z',
+          id: '1.0.0|app1',
+          status: 'available',
+          version: '1.0.0'
+        }
+      ])
+    })
+
+    test('should successfully get latest deployable list', async () => {
+      params.version = 'latest'
+
+      await expect(getDeployableList(params)).resolves.toEqual([
+        {
+          app: 'app1',
+          createdBy: 'test-user',
+          createdDate: '2025-11-06T21:36:16.852Z',
+          id: '1.0.0|app1',
+          status: 'available',
+          version: '1.0.0'
+        }
+      ])
     })
   })
 

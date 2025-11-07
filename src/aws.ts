@@ -1,4 +1,4 @@
-import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import {
   BatchWriteCommand,
   BatchWriteCommandInput,
@@ -14,48 +14,48 @@ import {
   UpdateCommand,
   UpdateCommandInput,
   UpdateCommandOutput
-} from '@aws-sdk/lib-dynamodb'
-import { marshallOptions, unmarshallOptions } from '@aws-sdk/util-dynamodb'
-import { asyncify, mapLimit } from 'async'
-import _ from 'lodash'
-import * as core from '@actions/core'
-import { setFailedAndCreateError } from './utilities.ts'
+} from '@aws-sdk/lib-dynamodb';
+import { marshallOptions, unmarshallOptions } from '@aws-sdk/util-dynamodb';
+import { asyncify, mapLimit } from 'async';
+import _ from 'lodash';
+import * as core from '@actions/core';
+import { setFailedAndCreateError } from './utilities.ts';
 
-const MAX_BATCH_WRITE_ITEMS = 25
-const MAX_RETRY_COUNT = 5
-const MAX_DELAY_TIME_IN_MS = 3000
-const MAX_BATCH_WRITE_PARALLEL_EXECUTIONS = 20
+const MAX_BATCH_WRITE_ITEMS = 25;
+const MAX_RETRY_COUNT = 5;
+const MAX_DELAY_TIME_IN_MS = 3000;
+const MAX_BATCH_WRITE_PARALLEL_EXECUTIONS = 20;
 
 type ProgressType = {
-  rows: number
-  batchIndex: number
-  capacity: number
-  retries: number
-}
+  rows: number;
+  batchIndex: number;
+  capacity: number;
+  retries: number;
+};
 
 type TotalProgressType = {
-  rows: number
-  batches: number
-  capacity: number
-  retries: number
-}
+  rows: number;
+  batches: number;
+  capacity: number;
+  retries: number;
+};
 
-let awsDdbDocClient: DynamoDBDocumentClient | null = null
+let awsDdbDocClient: DynamoDBDocumentClient | null = null;
 
 const ddbDocClient = (): DynamoDBDocumentClient => {
   if (!awsDdbDocClient) {
-    throw new Error(`ddbDocClient has not been initialized`)
+    throw new Error(`ddbDocClient has not been initialized`);
   }
-  return awsDdbDocClient
-}
+  return awsDdbDocClient;
+};
 
 const delay = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
 const buildTranslateConfig = (params?: {
-  marshallOptions?: marshallOptions
-  unmarshallOptions?: unmarshallOptions
+  marshallOptions?: marshallOptions;
+  unmarshallOptions?: unmarshallOptions;
 }): TranslateConfig => {
   const marshallOptions = _.get(params, 'marshallOptions', {
     // Whether to automatically convert empty strings, blobs, and sets to `null`.
@@ -64,239 +64,219 @@ const buildTranslateConfig = (params?: {
     removeUndefinedValues: true, // false, by default.
     // Whether to convert typeof object to map attribute.
     convertClassInstanceToMap: false // false, by default.
-  })
+  });
 
   const unmarshallOptions = _.get(params, 'unmarshallOptions', {
     // Whether to return numbers as a string instead of converting them to native JavaScript numbers.
     wrapNumbers: false // false, by default.
-  })
+  });
 
   const translateConfig: TranslateConfig = {
     marshallOptions,
     unmarshallOptions
-  }
+  };
 
-  return translateConfig
-}
+  return translateConfig;
+};
 
 export const init = async (params?: {
-  config?: DynamoDBClientConfig
-  marshallOptions?: marshallOptions
-  unmarshallOptions?: unmarshallOptions
-  disableXray?: boolean
+  config?: DynamoDBClientConfig;
+  marshallOptions?: marshallOptions;
+  unmarshallOptions?: unmarshallOptions;
+  disableXray?: boolean;
 }): Promise<void> => {
-  const { config = {} } = params || {}
+  const { config = {} } = params || {};
 
-  config.region = config.region || 'us-west-2'
+  config.region = config.region || 'us-west-2';
 
   const translateConfig = buildTranslateConfig({
     marshallOptions: params?.marshallOptions,
     unmarshallOptions: params?.unmarshallOptions
-  })
+  });
 
-  awsDdbDocClient = DynamoDBDocumentClient.from(
-    new DynamoDBClient(config),
-    translateConfig
-  )
-}
+  awsDdbDocClient = DynamoDBDocumentClient.from(new DynamoDBClient(config), translateConfig);
+};
 
-export const getAllQueryItems = async (params: {
-  input: QueryCommandInput
-}): Promise<Record<string, unknown>[]> => {
-  const items: Record<string, unknown>[] = []
-  const { input } = params
-  const command = new QueryCommand(input)
-  let data: QueryCommandOutput = await ddbDocClient().send(command)
+export const getAllQueryItems = async (params: { input: QueryCommandInput }): Promise<Record<string, unknown>[]> => {
+  const items: Record<string, unknown>[] = [];
+  const { input } = params;
+  const command = new QueryCommand(input);
+  let data: QueryCommandOutput = await ddbDocClient().send(command);
   do {
     if (data.Items) {
-      items.push(...data.Items)
+      items.push(...data.Items);
     }
     if (data && data.LastEvaluatedKey) {
-      input.ExclusiveStartKey = data.LastEvaluatedKey
-      const command = new QueryCommand(input)
-      data = await ddbDocClient().send(command)
+      input.ExclusiveStartKey = data.LastEvaluatedKey;
+      const command = new QueryCommand(input);
+      data = await ddbDocClient().send(command);
       if (!data.LastEvaluatedKey) {
         // if there is no LastEvaluatedKey, then add the last set of items to the array
         if (data.Items) {
-          items.push(...data.Items)
+          items.push(...data.Items);
         }
       }
     }
-  } while (data.LastEvaluatedKey)
+  } while (data.LastEvaluatedKey);
 
-  return items
-}
+  return items;
+};
 
 export const put = async (params: {
-  input: PutCommandInput
-  ignoreConditionExpressionFailedException?: boolean
+  input: PutCommandInput;
+  ignoreConditionExpressionFailedException?: boolean;
 }): Promise<PutCommandOutput> => {
-  const { input } = params
+  const { input } = params;
 
-  const command = new PutCommand(input)
-
-  try {
-    return await ddbDocClient().send(command)
-  } catch (err) {
-    const errMsg = `Could not put DynamoDb record; input: ${JSON.stringify(input)}; error: ${err}`
-    throw setFailedAndCreateError(errMsg)
-  }
-}
-
-export const update = async (params: {
-  input: UpdateCommandInput
-}): Promise<UpdateCommandOutput> => {
-  const { input } = params
-
-  const command = new UpdateCommand(input)
+  const command = new PutCommand(input);
 
   try {
-    return await ddbDocClient().send(command)
+    return await ddbDocClient().send(command);
   } catch (err) {
-    const errMsg = `Could not update DynamoDb record; input: ${JSON.stringify(input)}; error: ${err}`
-    throw setFailedAndCreateError(errMsg)
+    const errMsg = `Could not put DynamoDb record; input: ${JSON.stringify(input)}; error: ${err}`;
+    throw setFailedAndCreateError(errMsg);
   }
-}
+};
 
-const batchWrite = async (params: {
-  input: BatchWriteCommandInput
-}): Promise<BatchWriteCommandOutput> => {
-  const { input } = params
+export const update = async (params: { input: UpdateCommandInput }): Promise<UpdateCommandOutput> => {
+  const { input } = params;
 
-  const command = new BatchWriteCommand(input)
+  const command = new UpdateCommand(input);
 
   try {
-    return await ddbDocClient().send(command)
+    return await ddbDocClient().send(command);
   } catch (err) {
-    const errMsg = `Could not batch write DynamoDb records; input: ${JSON.stringify(input)}; error: ${err}`
-    throw setFailedAndCreateError(errMsg)
+    const errMsg = `Could not update DynamoDb record; input: ${JSON.stringify(input)}; error: ${err}`;
+    throw setFailedAndCreateError(errMsg);
   }
-}
+};
 
-const batchWriteChunk = async (params: {
-  chunk: object[]
-  chunkIndex: number
-  tableName: string
-  retries?: number
+const batchWrite = async (params: { input: BatchWriteCommandInput }): Promise<BatchWriteCommandOutput> => {
+  const { input } = params;
+
+  const command = new BatchWriteCommand(input);
+
+  try {
+    return await ddbDocClient().send(command);
+  } catch (err) {
+    const errMsg = `Could not batch write DynamoDb records; input: ${JSON.stringify(input)}; error: ${err}`;
+    throw setFailedAndCreateError(errMsg);
+  }
+};
+
+const batchWritePutChunk = async (params: {
+  chunk: object[];
+  chunkIndex: number;
+  tableName: string;
+  retries?: number;
 }): Promise<ProgressType> => {
-  const { chunk, chunkIndex, tableName } = params
-  let retries = params.retries || 0
+  const { chunk, chunkIndex, tableName } = params;
+  let retries = params.retries || 0;
 
   const input: BatchWriteCommandInput = {
     RequestItems: {
       [tableName]: chunk.map((item) => {
-        return { PutRequest: { Item: item } }
+        return { PutRequest: { Item: item } };
       })
     },
     ReturnConsumedCapacity: 'TOTAL'
-  }
+  };
 
-  let retryItems: object[] = []
+  let retryItems: object[] = [];
 
   const progress = {
     batchIndex: chunkIndex,
     rows: chunk.length,
     capacity: 0,
     retries
-  }
+  };
 
   try {
-    const results = await batchWrite({ input })
+    const results = await batchWrite({ input });
 
-    if (
-      results.ConsumedCapacity &&
-      results.ConsumedCapacity[0] &&
-      results.ConsumedCapacity[0].CapacityUnits
-    ) {
-      progress.capacity = results.ConsumedCapacity[0].CapacityUnits
+    if (results.ConsumedCapacity && results.ConsumedCapacity[0] && results.ConsumedCapacity[0].CapacityUnits) {
+      progress.capacity = results.ConsumedCapacity[0].CapacityUnits;
     }
 
     /* Handle partial failures */
-    if (
-      results.UnprocessedItems &&
-      results.UnprocessedItems[tableName] &&
-      results.UnprocessedItems[tableName].length > 0
-    ) {
-      retryItems = results.UnprocessedItems[tableName]
+    if (results.UnprocessedItems && results.UnprocessedItems[tableName] && results.UnprocessedItems[tableName].length > 0) {
+      retryItems = results.UnprocessedItems[tableName];
     }
   } catch (err) {
     /* Only if all DynamoDB operations fail, or the API is throttled */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const errCode = (err as any).code as string
+    const errCode = (err as any).code as string;
 
-    if (
-      errCode == 'ProvisionedThroughputExceededException' ||
-      errCode == 'ThrottlingException'
-    ) {
-      retryItems = chunk
+    if (errCode == 'ProvisionedThroughputExceededException' || errCode == 'ThrottlingException') {
+      retryItems = chunk;
     } else {
-      throw err
+      throw err;
     }
   }
 
   if (retryItems.length !== 0) {
-    retries++
+    retries++;
 
     if (retries > MAX_RETRY_COUNT) {
-      throw new Error('batchWriteChunk retries exhausted')
+      throw new Error('batchWritePutChunk retries exhausted');
     }
 
     /* Delay Exponential with jitter before retrying these items */
-    let delayTime = retries * retries * 50
-    let jitter = Math.ceil(Math.random() * 50)
+    let delayTime = retries * retries * 50;
+    let jitter = Math.ceil(Math.random() * 50);
 
     if (delayTime > MAX_DELAY_TIME_IN_MS) {
       /* Cap wait time and also increase jitter */
-      delayTime = MAX_DELAY_TIME_IN_MS
-      jitter = jitter * 3
+      delayTime = MAX_DELAY_TIME_IN_MS;
+      jitter = jitter * 3;
     }
 
-    const retryIn = delayTime + jitter
+    const retryIn = delayTime + jitter;
 
     core.info(
-      `batchWriteChunk progress: ${JSON.stringify({
+      `batchWritePutChunk progress: ${JSON.stringify({
         ...progress,
         retryingIn: retryIn
       })}`
-    )
+    );
 
-    await delay(retryIn)
+    await delay(retryIn);
 
-    const retryProgress = await batchWriteChunk({
+    const retryProgress = await batchWritePutChunk({
       chunk: retryItems,
       chunkIndex,
       tableName,
       retries
-    })
+    });
 
-    progress.capacity += retryProgress.capacity
-    progress.retries = retryProgress.retries
+    progress.capacity += retryProgress.capacity;
+    progress.retries = retryProgress.retries;
   } else {
-    core.info(`batchWriteChunk progress: ${JSON.stringify(progress)}`)
+    core.info(`batchWritePutChunk progress: ${JSON.stringify(progress)}`);
   }
 
-  return progress
-}
+  return progress;
+};
 
-export const batchWriteAll = async (params: {
-  data: object[]
-  tableName: string
-  maxBatchWriteItems?: number
-  maxBatchWriteParallelExecutions?: number
+export const batchWritePutAll = async (params: {
+  data: object[];
+  tableName: string;
+  maxBatchWriteItems?: number;
+  maxBatchWriteParallelExecutions?: number;
 }): Promise<TotalProgressType> => {
   const {
     data,
     tableName,
     maxBatchWriteItems = MAX_BATCH_WRITE_ITEMS,
     maxBatchWriteParallelExecutions = MAX_BATCH_WRITE_PARALLEL_EXECUTIONS
-  } = params
+  } = params;
 
   // chunk data via batch write max items limit
-  const chunkedData = _.chunk(data, maxBatchWriteItems)
+  const chunkedData = _.chunk(data, maxBatchWriteItems);
 
-  core.info(`looping through chunks: ${chunkedData.length}`)
+  core.info(`looping through chunks: ${chunkedData.length}`);
 
-  const chunkedIndexes = Object.keys(chunkedData)
+  const chunkedIndexes = Object.keys(chunkedData);
 
   const progresses = mapLimit<string, ProgressType>(
     chunkedIndexes,
@@ -304,15 +284,15 @@ export const batchWriteAll = async (params: {
     // need to use asyncify to wrap the promise, otherwise it will not work/return results
     // https://github.com/caolan/async/issues/1685
     asyncify((index: string) => {
-      const indexNum = Number(index)
-      const chunk = chunkedData[indexNum]
-      return batchWriteChunk({
+      const indexNum = Number(index);
+      const chunk = chunkedData[indexNum];
+      return batchWritePutChunk({
         chunk,
         chunkIndex: indexNum,
         tableName
-      })
+      });
     })
-  )
+  );
 
   return progresses.then((results) => {
     const totalProgress = results.reduce(
@@ -322,13 +302,107 @@ export const batchWriteAll = async (params: {
           rows: acc.rows + item.rows,
           capacity: acc.capacity + item.capacity,
           retries: acc.retries + item.retries
-        }
+        };
       },
       { rows: 0, batches: 0, capacity: 0, retries: 0 }
-    )
+    );
 
-    core.info(`batchWriteAll totalProgress: ${JSON.stringify(totalProgress)}`)
+    core.info(`batchWritePutAll totalProgress: ${JSON.stringify(totalProgress)}`);
 
-    return totalProgress
-  })
-}
+    return totalProgress;
+  });
+};
+
+const batchWritePutChunk = async (params: {
+  chunk: { PutRequest: { Item: PutCommandInput } }[];
+  chunkIndex: number;
+  tableName: string;
+  retries?: number;
+}): Promise<ProgressType> => {
+  const { chunk, chunkIndex, tableName } = params;
+  let retries = params.retries || 0;
+
+  const input: BatchWriteCommandInput = {
+    RequestItems: {
+      [tableName]: chunk.map((item) => {
+        return { PutRequest: { Item: item } };
+      })
+    },
+    ReturnConsumedCapacity: 'TOTAL'
+  };
+
+  let retryItems: object[] = [];
+
+  const progress = {
+    batchIndex: chunkIndex,
+    rows: chunk.length,
+    capacity: 0,
+    retries
+  };
+
+  try {
+    const results = await batchWrite({ input });
+
+    if (results.ConsumedCapacity && results.ConsumedCapacity[0] && results.ConsumedCapacity[0].CapacityUnits) {
+      progress.capacity = results.ConsumedCapacity[0].CapacityUnits;
+    }
+
+    /* Handle partial failures */
+    if (results.UnprocessedItems && results.UnprocessedItems[tableName] && results.UnprocessedItems[tableName].length > 0) {
+      retryItems = results.UnprocessedItems[tableName];
+    }
+  } catch (err) {
+    /* Only if all DynamoDB operations fail, or the API is throttled */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errCode = (err as any).code as string;
+
+    if (errCode == 'ProvisionedThroughputExceededException' || errCode == 'ThrottlingException') {
+      retryItems = chunk;
+    } else {
+      throw err;
+    }
+  }
+
+  if (retryItems.length !== 0) {
+    retries++;
+
+    if (retries > MAX_RETRY_COUNT) {
+      throw new Error('batchWritePutChunk retries exhausted');
+    }
+
+    /* Delay Exponential with jitter before retrying these items */
+    let delayTime = retries * retries * 50;
+    let jitter = Math.ceil(Math.random() * 50);
+
+    if (delayTime > MAX_DELAY_TIME_IN_MS) {
+      /* Cap wait time and also increase jitter */
+      delayTime = MAX_DELAY_TIME_IN_MS;
+      jitter = jitter * 3;
+    }
+
+    const retryIn = delayTime + jitter;
+
+    core.info(
+      `batchWritePutChunk progress: ${JSON.stringify({
+        ...progress,
+        retryingIn: retryIn
+      })}`
+    );
+
+    await delay(retryIn);
+
+    const retryProgress = await batchWritePutChunk({
+      chunk: retryItems,
+      chunkIndex,
+      tableName,
+      retries
+    });
+
+    progress.capacity += retryProgress.capacity;
+    progress.retries = retryProgress.retries;
+  } else {
+    core.info(`batchWritePutChunk progress: ${JSON.stringify(progress)}`);
+  }
+
+  return progress;
+};

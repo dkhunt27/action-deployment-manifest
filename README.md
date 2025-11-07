@@ -2,6 +2,13 @@
 
 This git action maintains a deployment manifest of the matrix of environments, apps, versions, and statuses
 
+## Testing
+
+Uses [localstack](https://app.localstack.cloud/getting-started) to test dynamodb commands locally
+
+```bash
+
+```
 ## Test your action locally
 
 The [`@github/local-action`](https://github.com/github/local-action) utility can

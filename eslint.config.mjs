@@ -67,6 +67,7 @@ export default [
     },
 
     rules: {
+      semi: 'always',
       camelcase: 'off',
       'eslint-comments/no-use': 'off',
       'eslint-comments/no-unused-disable': 'off',
