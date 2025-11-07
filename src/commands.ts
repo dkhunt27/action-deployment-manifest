@@ -1,17 +1,14 @@
 import * as core from '@actions/core';
 import { buildDeployableKey, buildDeployedKey, setFailedAndCreateError } from './utilities.ts';
-import { batchWritePutAll, update } from './aws.ts';
+import { batchWritePutAll } from './aws.ts';
 import { DeployableRecordType, DeployedRecordType, DeploymentStatus } from './types.ts';
 import {
   assertAppEnvExistsOnceAtMost,
   assertAppVersionDoesNotExist,
-  assertAppVersionExistsExactlyOnce
+  assertAppVersionExistsExactlyOnce,
+  assertAppVersionRecordsExistsExactlyOnce
 } from './utilities-assert.ts';
-import {
-  queryRecordsByApp,
-  queryRecordsByStatus,
-  queryRecordsByVersion
-} from './utilities-query.ts';
+import { queryRecordsByStatus, queryRecordsByVersion } from './utilities-query.ts';
 import {
   getRelevantDeployableRecordsForMarkDeployed,
   updateDeployableProdRecordToRollback,
@@ -43,14 +40,8 @@ export class DeploymentManifestCommands {
     );
 
     // assert app/version does not exist in deployable
-    const records = await queryRecordsByVersion<DeployableRecordType>({
-      table: this.deployableTable,
-      version
-    });
-
     await assertAppVersionDoesNotExist<DeployableRecordType>({
       table: this.deployableTable,
-      records,
       version,
       appList
     });
@@ -109,7 +100,7 @@ export class DeploymentManifestCommands {
 
       if (appList.length > 0) {
         // assert app/version only has one record in deployable
-        await assertAppVersionExistsExactlyOnce<DeployableRecordType>({
+        await assertAppVersionRecordsExistsExactlyOnce<DeployableRecordType>({
           table: this.deployableTable,
           records,
           version,
@@ -155,26 +146,14 @@ export class DeploymentManifestCommands {
       core.info(logMsg);
 
       // assert app/version exists in deployable exactly once
-      const deployables = await queryRecordsByVersion<DeployableRecordType>({
-        table: this.deployableTable,
-        version
-      });
-
       assertAppVersionExistsExactlyOnce<DeployableRecordType>({
-        records: deployables,
         table: this.deployableTable,
         version,
         appList
       });
 
       // assert app/env exists in deployed no more than once
-      const deployed = await queryRecordsByVersion<DeployedRecordType>({
-        table: this.deployedTable,
-        version
-      });
-
       assertAppEnvExistsOnceAtMost<DeployedRecordType>({
-        records: deployed,
         version,
         appList,
         table: this.deployedTable
@@ -280,5 +259,9 @@ export class DeploymentManifestCommands {
       const errMsg = `markRejected error: ${error}`;
       throw setFailedAndCreateError(errMsg);
     }
+  };
+
+  auditDeployableRecords = async (): Promise<void> => {
+    // implement audit logic here
   };
 }
