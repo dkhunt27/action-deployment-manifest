@@ -4,6 +4,9 @@ import { QueryCommandInput } from '@aws-sdk/lib-dynamodb'
 import { batchWriteAll, getAllQueryItems } from './aws.ts'
 import { DeployableRecordType } from './types.ts'
 
+const VERSION_INDEX_NAME = 'version-index'
+const STATUS_INDEX_NAME = 'status-index'
+
 const queryDeployableRecordsByVersion = async (params: {
   deployableTable: string
   version: string
@@ -14,7 +17,7 @@ const queryDeployableRecordsByVersion = async (params: {
   try {
     const input: QueryCommandInput = {
       TableName: deployableTable,
-      IndexName: 'version-app-index', // TODO: just version since IN not supported
+      IndexName: VERSION_INDEX_NAME,
       KeyConditionExpression: 'version = :version',
       ExpressionAttributeValues: {
         ':version': version
@@ -38,7 +41,7 @@ const queryDeployableRecordsByStatus = async (params: {
   try {
     const input: QueryCommandInput = {
       TableName: deployableTable,
-      IndexName: 'status-index',
+      IndexName: STATUS_INDEX_NAME,
       KeyConditionExpression: 'status = :status',
       ExpressionAttributeValues: {
         ':status': status

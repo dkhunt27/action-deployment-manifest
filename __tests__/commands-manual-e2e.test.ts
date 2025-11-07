@@ -1,3 +1,4 @@
+/* eslint-disable jest/no-disabled-tests */
 import { addNewDeployable, getDeployableList } from '../src/commands.ts'
 import { init } from '../src/aws.ts'
 
@@ -50,11 +51,10 @@ describe('commands manual test harness', () => {
       params = {
         deployableTable: 'dev-dhunt-pipelines-deployable',
         version: '1.0.0'
-        // appList: ['app1', 'app2'],
       }
     })
 
-    test('should successfully get deployable list', async () => {
+    test('should successfully get versioned deployable list', async () => {
       await expect(getDeployableList(params)).resolves.toEqual([
         {
           app: 'app1',
@@ -75,8 +75,23 @@ describe('commands manual test harness', () => {
       ])
     })
 
-    test('should successfully get restricted deployable list', async () => {
+    test('should successfully get versioned restricted deployable list', async () => {
       params.appList = ['app1']
+
+      await expect(getDeployableList(params)).resolves.toEqual([
+        {
+          app: 'app1',
+          createdBy: 'test-user',
+          createdDate: '2025-11-06T21:36:16.852Z',
+          id: '1.0.0|app1',
+          status: 'available',
+          version: '1.0.0'
+        }
+      ])
+    })
+
+    test('should successfully get latest deployable list', async () => {
+      params.version = 'latest'
 
       await expect(getDeployableList(params)).resolves.toEqual([
         {
