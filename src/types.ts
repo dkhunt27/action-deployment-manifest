@@ -12,8 +12,8 @@ export type DeployableRecordType = {
   version: string;
   app: string;
   status: DeploymentStatus;
-  createdDate: string;
-  createdBy: string;
+  modifiedDate: string;
+  modifiedBy: string;
 };
 
 export type DeployedRecordType = {
@@ -23,4 +23,9 @@ export type DeployedRecordType = {
   version: string;
   deployedDate: string;
   deployedBy: string;
+};
+
+export type ConfigurationType = {
+  deployableTable: string;
+  deployedTable: string;
 };

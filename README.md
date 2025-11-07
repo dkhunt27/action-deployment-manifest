@@ -4,11 +4,16 @@ This git action maintains a deployment manifest of the matrix of environments, a
 
 ## Testing
 
-Uses [localstack](https://app.localstack.cloud/getting-started) to test dynamodb commands locally
+Need to install [aws cli](https://docs.aws.amazon.com/cli/v1/userguide/install-macos.html) and [localstack](https://app.localstack.cloud/getting-started) to test dynamodb commands locally.  Start localstack and create the tables
 
 ```bash
+   brew install awscli
+   brew install localstack/tap/localstack-cli
+   localstack auth set-token [see localstack getting started for token]
 
+   ./localstack-init.sh
 ```
+
 ## Test your action locally
 
 The [`@github/local-action`](https://github.com/github/local-action) utility can
@@ -63,3 +68,8 @@ following steps:
    commits, tags and branches to the remote repository. From here, you will need
    to create a new release in GitHub so users can easily reference the new tags
    in their workflows.
+
+## Troubleshooting
+
+### SyntaxError: Cannot use import statement outside a module
+if you get the error `SyntaxError: Cannot use import statement outside a module` when trying to run test in vscode, you will need to enable the jest options in package.json in vscode.  Set `Jestrunner: Jest Command` to `NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest`

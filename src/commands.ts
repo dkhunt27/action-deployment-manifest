@@ -1,28 +1,26 @@
 import * as core from '@actions/core';
-import { buildDeployableKey, buildDeployedKey, setFailedAndCreateError } from './utilities.ts';
-import { batchWritePutAll } from './aws.ts';
-import { DeployableRecordType, DeployedRecordType, DeploymentStatus } from './types.ts';
+import { ConfigService } from './config-service.ts';
 import {
-  assertAppEnvExistsOnceAtMost,
-  assertAppVersionDoesNotExist,
-  assertAppVersionExistsExactlyOnce,
-  assertAppVersionRecordsExistsExactlyOnce
-} from './utilities-assert.ts';
-import { queryRecordsByStatus, queryRecordsByVersion } from './utilities-query.ts';
-import {
-  getRelevantDeployableRecordsForMarkDeployed,
-  updateDeployableProdRecordToRollback,
-  updateDeployableRollbackRecordToDecommissioned,
-  updateDeployableVersionRecordToStatus
-} from './utilities-commands.ts';
+  ConfigurationType,
+  DeployableRecordType,
+  DeployedRecordType,
+  DeploymentStatus
+} from './types.ts';
+import { AssertUtilities } from './utilities-assert.ts';
+import { CommandUtilities } from './utilities-commands.ts';
+import { QueryUtilities } from './utilities-query.ts';
+import { setFailedAndCreateError } from './utilities.ts';
 
-export class DeploymentManifestCommands {
-  private readonly deployableTable: string;
-  private readonly deployedTable: string;
+export class CommandService {
+  private readonly config: ConfigurationType;
 
-  constructor(deployableTable: string, deployedTable: string) {
-    this.deployableTable = deployableTable;
-    this.deployedTable = deployedTable;
+  constructor(
+    private readonly assertUtils: AssertUtilities,
+    private readonly commandUtils: CommandUtilities,
+    private readonly queryUtils: QueryUtilities,
+    configService: ConfigService
+  ) {
+    this.config = configService.config();
   }
   /**
    * handle new deployable (addNewDeployable, version, appList)
@@ -40,28 +38,20 @@ export class DeploymentManifestCommands {
     );
 
     // assert app/version does not exist in deployable
-    await assertAppVersionDoesNotExist<DeployableRecordType>({
-      table: this.deployableTable,
+    await this.assertUtils.assertAppVersionDoesNotExist<DeployableRecordType>({
+      table: this.config.deployableTable,
       version,
       appList
     });
 
     // add app/version to deployable with status available
-    try {
-      const data = appList.map((item) => {
-        return {
-          id: buildDeployableKey({ app: item, version }),
-          version,
-          app: item,
-          status: 'available',
-          createdDate: new Date().toISOString(),
-          createdBy: actor
-        };
+    for (const app of appList) {
+      await this.commandUtils.putDeployableRecord({
+        app,
+        version,
+        status: DeploymentStatus.AVAILABLE,
+        actor
       });
-      await batchWritePutAll({ tableName: this.deployableTable, data });
-    } catch (err) {
-      const errMsg = `addNewDeployable (table: ${this.deployableTable}):: could not put data for version: ${version} and appList: ${appList}; error: ${err}`;
-      throw setFailedAndCreateError(errMsg);
     }
   };
 
@@ -84,14 +74,14 @@ export class DeploymentManifestCommands {
       let records: DeployableRecordType[] = [];
       if (version === 'latest') {
         // if version=latest, return all records with status "prod"
-        records = await queryRecordsByStatus<DeployableRecordType>({
-          table: this.deployableTable,
+        records = await this.queryUtils.queryRecordsByStatus<DeployableRecordType>({
+          table: this.config.deployableTable,
           status: 'prod'
         });
       } else {
         // if version!=latest, return records with status not rejected that match version
-        const all = await queryRecordsByVersion<DeployableRecordType>({
-          table: this.deployableTable,
+        const all = await this.queryUtils.queryRecordsByVersion<DeployableRecordType>({
+          table: this.config.deployableTable,
           version
         });
 
@@ -100,8 +90,8 @@ export class DeploymentManifestCommands {
 
       if (appList.length > 0) {
         // assert app/version only has one record in deployable
-        await assertAppVersionRecordsExistsExactlyOnce<DeployableRecordType>({
-          table: this.deployableTable,
+        await this.assertUtils.assertAppVersionRecordsExistsExactlyOnce<DeployableRecordType>({
+          table: this.config.deployableTable,
           records,
           version,
           appList
@@ -141,47 +131,45 @@ export class DeploymentManifestCommands {
     const { version, env, appList, actor, deployedToProd } = params;
 
     try {
-      let logMsg = `Marking deployable as rejected for version ${version}`;
+      let logMsg = `Marking deployed to ${env} for version ${version} (deployedToProd: ${deployedToProd})`;
       logMsg += appList.length > 0 ? ` restricting to apps: ${appList.join(', ')}` : ' (all apps)';
       core.info(logMsg);
 
       // assert app/version exists in deployable exactly once
-      assertAppVersionExistsExactlyOnce<DeployableRecordType>({
-        table: this.deployableTable,
+      this.assertUtils.assertAppVersionExistsExactlyOnce<DeployableRecordType>({
+        table: this.config.deployableTable,
         version,
         appList
       });
 
       // assert app/env exists in deployed no more than once
-      assertAppEnvExistsOnceAtMost<DeployedRecordType>({
-        version,
+      this.assertUtils.assertAppEnvExistsOnceAtMost<DeployedRecordType>({
+        env,
         appList,
-        table: this.deployedTable
+        table: this.config.deployedTable
       });
 
       // if env/app exists in deployed, update version
       // if env/app does not exist in deployed, add new record with version
 
-      // doesn't matter if updating or adding, batchWritePutAll will do both
-      const data = appList.map((item) => {
-        return {
-          id: buildDeployedKey({ app: item, env }),
+      // doesn't matter if updating or adding, put will do both
+      for (const app of appList) {
+        await this.commandUtils.putDeployedRecord({
           env,
-          app: item,
+          app,
           version,
-          deployedDate: new Date().toISOString(),
-          deployedBy: actor
-        } as DeployedRecordType;
-      });
-      await batchWritePutAll({ tableName: this.deployedTable, data });
+          actor
+        });
+      }
 
       for (const app of appList) {
         // need to get all deployable records with matching app and (version or have status rollback or prod)
-        const deployableRecords = await getRelevantDeployableRecordsForMarkDeployed({
-          deployableTable: this.deployableTable,
-          app,
-          version
-        });
+        const deployableRecords =
+          await this.commandUtils.getRelevantDeployableRecordsForMarkDeployed({
+            deployableTable: this.config.deployableTable,
+            app,
+            version
+          });
 
         if (deployedToProd) {
           // update status to decommissioned where app has status rollback
@@ -190,24 +178,24 @@ export class DeploymentManifestCommands {
 
           for (const app of appList) {
             // Find records with rollback status for this app and update to decommissioned
-            updateDeployableRollbackRecordToDecommissioned({
-              deployableTable: this.deployableTable,
+            await this.commandUtils.updateDeployableRollbackRecordToDecommissioned({
+              deployableTable: this.config.deployableTable,
               records: deployableRecords,
               app,
               actor
             });
 
             // Find records with prod status for this app and update to rollback
-            updateDeployableProdRecordToRollback({
-              deployableTable: this.deployableTable,
+            await this.commandUtils.updateDeployableProdRecordToRollback({
+              deployableTable: this.config.deployableTable,
               records: deployableRecords,
               app,
               actor
             });
 
             // Find the record that matches app/version and update to prod
-            updateDeployableVersionRecordToStatus({
-              deployableTable: this.deployableTable,
+            await this.commandUtils.updateDeployableVersionRecordToStatus({
+              deployableTable: this.config.deployableTable,
               records: deployableRecords,
               status: DeploymentStatus.PROD,
               app,
@@ -218,8 +206,8 @@ export class DeploymentManifestCommands {
         } else {
           // if deployedToProd is not true, update deployable
           // find app/version set status to "pending"
-          updateDeployableVersionRecordToStatus({
-            deployableTable: this.deployableTable,
+          await this.commandUtils.updateDeployableVersionRecordToStatus({
+            deployableTable: this.config.deployableTable,
             records: deployableRecords,
             status: DeploymentStatus.PENDING,
             app,
