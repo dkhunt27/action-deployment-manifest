@@ -1,53 +1,41 @@
-// import * as core from '@actions/core'
-// import type { NxCommandInputs } from 'action-nx-command-wrapper'
+import * as core from '@actions/core';
+import { DeploymentManifestCommand, type DeploymentManifestInputs } from './types.ts';
 
-// export const parseArgs = (raw: string): string[] => {
-//   return raw.split(' ').filter((arg) => arg.length > 0)
-// }
+const isValidCommand = (command: string): command is DeploymentManifestCommand => {
+  return Object.values(DeploymentManifestCommand).includes(command as DeploymentManifestCommand);
+};
 
-// export const parseInputs = (): NxCommandInputs => {
-//   const affectedToIgnore = core
-//     .getInput('affectedToIgnore', { required: false })
-//     .split(',')
-//     .filter((target: string[]) => target.length > 0)
+export const parseInputs = (): DeploymentManifestInputs => {
+  const command = core.getInput('command', { required: true });
+  if (!isValidCommand(command)) {
+    throw new Error(
+      `Invalid command input: ${command}; expected one of ${Object.values(DeploymentManifestCommand).join(', ')}`
+    );
+  }
+  const version = core.getInput('version', { required: true });
+  const actor = core.getInput('actor', { required: true });
+  const env = core.getInput('env', { required: false });
+  const deployedToProd = core.getBooleanInput('deployedToProd', {
+    required: false
+  });
+  const appList = core
+    .getInput('appList', { required: false })
+    .split(',')
+    .filter((app) => app.length > 0);
 
-//   const targets = core
-//     .getInput('targets', { required: false })
-//     .split(',')
-//     .filter((target: string[]) => target.length > 0)
+  const deployableTable = core.getInput('deployableTable', { required: true });
+  const deployedTable = core.getInput('deployedTable', { required: true });
+  const region = core.getInput('region', { required: false }) ?? 'us-east-1';
 
-//   const projects = core
-//     .getInput('projects', { required: false })
-//     .split(',')
-//     .filter((project: string[]) => project.length > 0)
-
-//   const command = core.getInput('command', { required: true })
-
-//   const args = parseArgs(core.getInput('args'))
-
-//   const setNxBranchToPrNumber =
-//     core.getInput('setNxBranchToPrNumber') === 'true'
-
-//   const workingDirectory = core.getInput('workingDirectory')
-
-//   const baseBoundaryOverride = core.getInput('baseBoundaryOverride')
-
-//   const headBoundaryOverride = core.getInput('headBoundaryOverride')
-
-//   // this is an internal flag used to skip running the actual nx command for testing purposes
-//   const isWorkflowsCiPipeline =
-//     core.getInput('isWorkflowsCiPipeline') === 'true'
-
-//   return {
-//     affectedToIgnore,
-//     args,
-//     command,
-//     baseBoundaryOverride,
-//     headBoundaryOverride,
-//     isWorkflowsCiPipeline,
-//     projects,
-//     setNxBranchToPrNumber,
-//     targets,
-//     workingDirectory
-//   } as NxCommandInputs
-// }
+  return {
+    command,
+    version,
+    actor,
+    appList,
+    env,
+    deployedToProd,
+    deployableTable,
+    deployedTable,
+    region
+  };
+};

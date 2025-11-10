@@ -1,24 +1,17 @@
 /* eslint-disable jest/no-disabled-tests */
-import { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
-import { AwsService } from '../src/aws.ts';
-import { CommandService } from '../src/commands.ts';
-import { ConfigService } from '../src/config-service.ts';
-import { AssertUtilities } from '../src/utilities-assert.ts';
-import { CommandUtilities } from '../src/utilities-commands.ts';
-import { QueryUtilities } from '../src/utilities-query.ts';
+import type { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
+import type { CommandService } from '../src/commands.ts';
+import { buildCommandService } from '../src/factory.ts';
 
 // make sure to start localstack first `localstack start`
 // and create the tables
 
 describe('CommandService e2e tests', () => {
-  let mockAwsService: AwsService;
   let service: CommandService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const deployableTable = 'deployable';
     const deployedTable = 'deployed';
-
-    const configService = new ConfigService(deployableTable, deployedTable);
 
     // mock using localstack
     const config: DynamoDBClientConfig = {
@@ -26,13 +19,7 @@ describe('CommandService e2e tests', () => {
       region: 'us-east-1'
     };
 
-    mockAwsService = new AwsService(config);
-
-    const queryUtils = new QueryUtilities(mockAwsService);
-    const commandUtils = new CommandUtilities(mockAwsService, queryUtils, configService);
-    const assertUtils = new AssertUtilities(queryUtils);
-
-    service = new CommandService(assertUtils, commandUtils, queryUtils, configService);
+    service = await buildCommandService({ deployableTable, deployedTable, config });
   });
 
   test('simulate v1 deployed to prod', async () => {
@@ -150,7 +137,7 @@ describe('CommandService e2e tests', () => {
       service.addNewDeployable({ ...params1, version: '1.4.0' })
     ).resolves.toBeUndefined();
 
-    let params2 = {
+    const params2 = {
       env: 'dev',
       appList: ['app1', 'app2', 'app3'],
       actor: 'test-user',
@@ -159,16 +146,31 @@ describe('CommandService e2e tests', () => {
 
     // deployed to 1.2 to prod
     await expect(
-      service.markDeployed({ ...params2, version: '1.2.0', env: 'prod', deployedToProd: true })
+      service.markDeployed({
+        ...params2,
+        version: '1.2.0',
+        env: 'prod',
+        deployedToProd: true
+      })
     ).resolves.toBeUndefined();
 
     // deployed to 1.3 to qa
     await expect(
-      service.markDeployed({ ...params2, version: '1.3.0', env: 'qa', deployedToProd: false })
+      service.markDeployed({
+        ...params2,
+        version: '1.3.0',
+        env: 'qa',
+        deployedToProd: false
+      })
     ).resolves.toBeUndefined();
     // deployed to 1.4 to dev
     await expect(
-      service.markDeployed({ ...params2, version: '1.4.0', env: 'dev', deployedToProd: false })
+      service.markDeployed({
+        ...params2,
+        version: '1.4.0',
+        env: 'dev',
+        deployedToProd: false
+      })
     ).resolves.toBeUndefined();
   });
 });

@@ -1,5 +1,5 @@
-import { QueryUtilities } from './utilities-query.ts';
 import { setFailedAndCreateError } from './utilities.ts';
+import type { QueryUtilities } from './utilities-query.ts';
 
 export class AssertUtilities {
   constructor(private readonly queryUtils: QueryUtilities) {}
@@ -11,7 +11,10 @@ export class AssertUtilities {
   }): Promise<void> => {
     const { version, appList, table } = params;
 
-    const records = await this.queryUtils.queryRecordsByVersion<T>({ table, version });
+    const records = await this.queryUtils.queryRecordsByVersion<T>({
+      table,
+      version
+    });
 
     // Check that each app in appList does not exists for this version
     for (const app of appList) {
@@ -31,7 +34,10 @@ export class AssertUtilities {
   }): Promise<void> => {
     const { version, appList, table } = params;
 
-    const records = await this.queryUtils.queryRecordsByVersion<T>({ table, version });
+    const records = await this.queryUtils.queryRecordsByVersion<T>({
+      table,
+      version
+    });
 
     this.assertAppVersionRecordsExistsExactlyOnce({
       records,
@@ -49,7 +55,10 @@ export class AssertUtilities {
   }): Promise<void> => {
     const { version, appList, table } = params;
 
-    const records = await this.queryUtils.queryRecordsByVersion<T>({ table, version });
+    const records = await this.queryUtils.queryRecordsByVersion<T>({
+      table,
+      version
+    });
 
     if (!records || records.length === 0) {
       const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;
@@ -80,7 +89,10 @@ export class AssertUtilities {
   }): Promise<void> => {
     const { table, version, appList } = params;
 
-    const records = await this.queryUtils.queryRecordsByVersion<T>({ table, version });
+    const records = await this.queryUtils.queryRecordsByVersion<T>({
+      table,
+      version
+    });
 
     // IN is not support in DynamoDb queries, so we have to check appList manually
     // Check that each app in appList exists at most once for this version

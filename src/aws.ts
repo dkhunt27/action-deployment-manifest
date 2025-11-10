@@ -1,18 +1,18 @@
-import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, type DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
   PutCommand,
-  PutCommandInput,
-  PutCommandOutput,
+  type PutCommandInput,
+  type PutCommandOutput,
   QueryCommand,
-  QueryCommandInput,
-  QueryCommandOutput,
-  TranslateConfig,
+  type QueryCommandInput,
+  type QueryCommandOutput,
+  type TranslateConfig,
   UpdateCommand,
-  UpdateCommandInput,
-  UpdateCommandOutput
+  type UpdateCommandInput,
+  type UpdateCommandOutput
 } from '@aws-sdk/lib-dynamodb';
-import { marshallOptions, unmarshallOptions } from '@aws-sdk/util-dynamodb';
+import type { marshallOptions, unmarshallOptions } from '@aws-sdk/util-dynamodb';
 import _ from 'lodash';
 import { setFailedAndCreateError } from './utilities.ts';
 

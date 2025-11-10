@@ -1,15 +1,15 @@
 import * as core from '@actions/core';
-import { ConfigService } from './config-service.ts';
+import type { ConfigService } from './config-service.ts';
 import {
-  ConfigurationType,
-  DeployableRecordType,
-  DeployedRecordType,
+  type ConfigurationType,
+  type DeployableRecordType,
+  type DeployedRecordType,
   DeploymentStatus
 } from './types.ts';
-import { AssertUtilities } from './utilities-assert.ts';
-import { CommandUtilities } from './utilities-commands.ts';
-import { QueryUtilities } from './utilities-query.ts';
 import { setFailedAndCreateError } from './utilities.ts';
+import type { AssertUtilities } from './utilities-assert.ts';
+import type { CommandUtilities } from './utilities-commands.ts';
+import type { QueryUtilities } from './utilities-query.ts';
 
 export class CommandService {
   private readonly config: ConfigurationType;

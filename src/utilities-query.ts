@@ -1,5 +1,5 @@
-import { QueryCommandInput } from '@aws-sdk/lib-dynamodb';
-import { AwsService } from './aws.ts';
+import type { QueryCommandInput } from '@aws-sdk/lib-dynamodb';
+import type { AwsService } from './aws.ts';
 import { setFailedAndCreateError } from './utilities.ts';
 
 const ENV_INDEX_NAME = 'env-index';

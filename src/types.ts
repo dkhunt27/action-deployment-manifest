@@ -7,6 +7,12 @@ export enum DeploymentStatus {
   ROLLBACK = 'rollback'
 }
 
+export enum DeploymentManifestCommand {
+  ADD_NEW_DEPLOYABLE = 'addNewDeployable',
+  GET_DEPLOYABLE_LIST = 'getDeployableList',
+  MARK_DEPLOYED = 'markDeployed'
+}
+
 export type DeployableRecordType = {
   id: string;
   version: string;
@@ -28,4 +34,17 @@ export type DeployedRecordType = {
 export type ConfigurationType = {
   deployableTable: string;
   deployedTable: string;
+};
+
+export type DeploymentManifestInputs = {
+  command: DeploymentManifestCommand;
+  version: string;
+  actor: string;
+  appList?: string[];
+  env?: string;
+  deployedToProd?: boolean;
+  // configuration
+  deployableTable: string;
+  deployedTable: string;
+  region: string;
 };
