@@ -37,6 +37,11 @@ export class CommandService {
       `Adding new deployable version ${version} for apps: ${appList.join(', ')} by actor ${actor}`
     );
 
+    if (appList.length === 0) {
+      const errMsg = `addNewDeployable error: appList cannot be empty`;
+      throw setFailedAndCreateError(errMsg);
+    }
+
     // assert app/version does not exist in deployable
     await this.assertUtils.assertAppVersionDoesNotExist<DeployableRecordType>({
       table: this.config.deployableTable,
@@ -176,33 +181,31 @@ export class CommandService {
           // update status to rollback where app has status prod
           // update status to prod where app/version matches
 
-          for (const app of appList) {
-            // Find records with rollback status for this app and update to decommissioned
-            await this.commandUtils.updateDeployableRollbackRecordToDecommissioned({
-              deployableTable: this.config.deployableTable,
-              records: deployableRecords,
-              app,
-              actor
-            });
+          // Find records with rollback status for this app and update to decommissioned
+          await this.commandUtils.updateDeployableRollbackRecordToDecommissioned({
+            deployableTable: this.config.deployableTable,
+            records: deployableRecords,
+            app,
+            actor
+          });
 
-            // Find records with prod status for this app and update to rollback
-            await this.commandUtils.updateDeployableProdRecordToRollback({
-              deployableTable: this.config.deployableTable,
-              records: deployableRecords,
-              app,
-              actor
-            });
+          // Find records with prod status for this app and update to rollback
+          await this.commandUtils.updateDeployableProdRecordToRollback({
+            deployableTable: this.config.deployableTable,
+            records: deployableRecords,
+            app,
+            actor
+          });
 
-            // Find the record that matches app/version and update to prod
-            await this.commandUtils.updateDeployableVersionRecordToStatus({
-              deployableTable: this.config.deployableTable,
-              records: deployableRecords,
-              status: DeploymentStatus.PROD,
-              app,
-              version,
-              actor
-            });
-          }
+          // Find the record that matches app/version and update to prod
+          await this.commandUtils.updateDeployableVersionRecordToStatus({
+            deployableTable: this.config.deployableTable,
+            records: deployableRecords,
+            status: DeploymentStatus.PROD,
+            app,
+            version,
+            actor
+          });
         } else {
           // if deployedToProd is not true, update deployable
           // find app/version set status to "pending"

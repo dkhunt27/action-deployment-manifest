@@ -1,0 +1,366 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`CommandService addNewDeployable should successfully add new deployable when no existing records 1`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "status": "available",
+      "version": "1.0.0",
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "status": "available",
+      "version": "1.0.0",
+    },
+  ],
+]
+`;
+
+exports[`CommandService getDeployableList should filter by appList when provided 1`] = `
+[
+  {
+    "app": "app4",
+    "id": "1.0.2|app4",
+    "status": "available",
+    "version": "1.0.2",
+  },
+  {
+    "app": "app5",
+    "id": "1.0.2|app5",
+    "status": "available",
+    "version": "1.0.2",
+  },
+]
+`;
+
+exports[`CommandService getDeployableList should return all prod records when version is latest 1`] = `
+[
+  {
+    "app": "app1",
+    "id": "1.0.0|app1",
+    "status": "prod",
+    "version": "1.0.0",
+  },
+  {
+    "app": "app2",
+    "id": "1.0.1|app2",
+    "status": "prod",
+    "version": "1.0.1",
+  },
+]
+`;
+
+exports[`CommandService getDeployableList should return app prod records when version is latest and appList provided 1`] = `
+[
+  {
+    "app": "app1",
+    "id": "1.0.0|app1",
+    "status": "prod",
+    "version": "1.0.0",
+  },
+]
+`;
+
+exports[`CommandService getDeployableList should return non-rejected records for specific version 1`] = `
+[
+  {
+    "app": "app1",
+    "id": "1.0.2|app1",
+    "status": "available",
+    "version": "1.0.2",
+  },
+  {
+    "app": "app3",
+    "id": "1.0.2|app3",
+    "status": "pending",
+    "version": "1.0.2",
+  },
+  {
+    "app": "app4",
+    "id": "1.0.2|app4",
+    "status": "available",
+    "version": "1.0.2",
+  },
+  {
+    "app": "app5",
+    "id": "1.0.2|app5",
+    "status": "available",
+    "version": "1.0.2",
+  },
+]
+`;
+
+exports[`CommandService markDeployed should successfully mark deployed to non-prod environment 1`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "env": "staging",
+      "version": "1.0.0",
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "env": "staging",
+      "version": "1.0.0",
+    },
+  ],
+]
+`;
+
+exports[`CommandService markDeployed should successfully mark deployed to non-prod environment 2`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+      "status": "pending",
+      "version": "1.0.0",
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+      "status": "pending",
+      "version": "1.0.0",
+    },
+  ],
+]
+`;
+
+exports[`CommandService markDeployed should successfully mark deployed to prod environment 1`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "env": "prod",
+      "version": "1.0.0",
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "env": "prod",
+      "version": "1.0.0",
+    },
+  ],
+]
+`;
+
+exports[`CommandService markDeployed should successfully mark deployed to prod environment 2`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+      "status": "prod",
+      "version": "1.0.0",
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+      "status": "prod",
+      "version": "1.0.0",
+    },
+  ],
+]
+`;
+
+exports[`CommandService markDeployed should successfully mark deployed to prod environment 3`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+    },
+  ],
+]
+`;
+
+exports[`CommandService markDeployed should successfully mark deployed to prod environment 4`] = `
+[
+  [
+    {
+      "actor": "test-user",
+      "app": "app1",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+    },
+  ],
+  [
+    {
+      "actor": "test-user",
+      "app": "app2",
+      "deployableTable": "deployableTable",
+      "records": [
+        {
+          "app": "app1",
+          "id": "1.0.0|app1",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+        {
+          "app": "app2",
+          "id": "1.0.0|app2",
+          "modifiedBy": "test",
+          "modifiedDate": "2024-01-01T11:22:27.000Z",
+          "status": "available",
+          "version": "1.0.0",
+        },
+      ],
+    },
+  ],
+]
+`;
