@@ -221,35 +221,4 @@ export class CommandService {
       throw setFailedAndCreateError(errMsg);
     }
   };
-
-  /**
-   * handle rejected (markRejected, version, appList?)
-   * assert app/version only has one record in deployable
-   * if appList is empty, mark all apps for that version as rejected
-   * if appList is provided, mark only those apps as rejected
-   */
-  markRejected = async (params: {
-    version: string;
-    actor: string;
-    appList?: string[];
-  }): Promise<void> => {
-    const { version, actor, appList = [] } = params;
-    try {
-      let logMsg = `Marking deployable as rejected for version ${version} by actor ${actor}`;
-      logMsg += appList.length > 0 ? ` restricting to apps: ${appList.join(', ')}` : ' (all apps)';
-      core.info(logMsg);
-
-      // handle rejected (markRejected, version, appList?)
-      // assert app/version only has one record in deployable
-      // if appList is empty, mark all apps for that version as rejected
-      // if appList is provided, mark only those apps as rejected
-    } catch (error) {
-      const errMsg = `markRejected error: ${error}`;
-      throw setFailedAndCreateError(errMsg);
-    }
-  };
-
-  auditDeployableRecords = async (): Promise<void> => {
-    // implement audit logic here
-  };
 }

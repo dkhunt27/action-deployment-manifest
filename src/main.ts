@@ -35,6 +35,8 @@ export const run = async (): Promise<void> => {
     // if deployedToProd is not true, update deployable
     //    find version/app set status to "pending"
     init()
+
+    if (
   } catch (error) {
     const errMsg = `Deployment manifest processing error: ${error}`
     throw setFailedAndCreateError(errMsg)

@@ -49,9 +49,9 @@ export class AwsService {
     return this.awsDdbDocClient;
   };
 
-  private delay = (ms: number) => {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  };
+  // private delay = (ms: number) => {
+  //   return new Promise((resolve) => setTimeout(resolve, ms));
+  // };
 
   private buildTranslateConfig = (params?: {
     marshallOptions?: marshallOptions;
