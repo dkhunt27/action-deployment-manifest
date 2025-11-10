@@ -1,5 +1,7 @@
-name: Deployment Manifest 
-description: git action that maintains a deployment manifest of the matrix of environments, apps, versions, and statuses
+name: Deployment Manifest
+description:
+  git action that maintains a deployment manifest of the matrix of environments, apps, versions, and
+  statuses
 author: dkhunt27
 
 branding:

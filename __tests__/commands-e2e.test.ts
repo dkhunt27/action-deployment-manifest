@@ -6,7 +6,7 @@ import { buildCommandService } from '../src/factory.ts';
 // make sure to start localstack first `localstack start`
 // and create the tables
 
-describe('CommandService e2e tests', () => {
+describe.skip('CommandService e2e tests', () => {
   let service: CommandService;
 
   beforeEach(async () => {
