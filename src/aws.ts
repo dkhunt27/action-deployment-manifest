@@ -107,7 +107,7 @@ export class AwsService {
       if (data.Items) {
         items.push(...data.Items);
       }
-      if (data && data.LastEvaluatedKey) {
+      if (data?.LastEvaluatedKey) {
         input.ExclusiveStartKey = data.LastEvaluatedKey;
         const command = new QueryCommand(input);
         data = await this.ddbDocClient().send(command);

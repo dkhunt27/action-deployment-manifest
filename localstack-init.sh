@@ -1,4 +1,6 @@
- aws dynamodb create-table \
+ 
+#!/bin/bash
+aws dynamodb create-table \
       --endpoint-url=http://localhost.localstack.cloud:4566 \
       --no-cli-pager \
       --billing-mode PAY_PER_REQUEST \
