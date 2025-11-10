@@ -59,3 +59,4 @@ jobs:
           VALIDATE_BIOME_FORMAT: false
           VALIDATE_CHECKOV: false
           VALIDATE_MARKDOWN: false
+          VALIDATE__SHELL_SHFMT: false

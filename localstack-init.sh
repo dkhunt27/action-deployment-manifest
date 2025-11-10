@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 aws dynamodb create-table \
     --endpoint-url=http://localhost.localstack.cloud:4566 \
