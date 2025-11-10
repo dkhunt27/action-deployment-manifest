@@ -106,3 +106,4 @@ aws dynamodb create-table \
          ]'
 
    aws dynamodb list-tables --endpoint-url=http://localhost.localstack.cloud:4566 --region=us-east-1 --no-cli-pager
+   

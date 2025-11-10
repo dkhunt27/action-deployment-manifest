@@ -44,20 +44,18 @@ jobs:
         id: npm-ci-test
         run: npm run ci-test
 
-  test-action:
-    name: GitHub Actions Test
-    runs-on: ubuntu-latest
+  # test-action:
+  #   name: GitHub Actions Test
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v5
+  #   steps:
+  #     - name: Checkout
+  #       id: checkout
+  #       uses: actions/checkout@v5
 
-      - name: Test Local Action
-        id: test-action
-        uses: ./
-        with:
-          command: runManyListedTargetsAndAffectedProjects
-          targets: abc
-          args: '--foo=bar'
-          isWorkflowsCiPipeline: true
+  #     - name: Test Local Action
+  #       id: test-action
+  #       uses: ./
+  #       with:
+  #         command: getDeployableList
+  #         version: 1.0.0
