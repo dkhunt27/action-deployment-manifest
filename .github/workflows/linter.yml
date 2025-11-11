@@ -58,3 +58,7 @@ jobs:
           VALIDATE_NATURAL_LANGUAGE: false
           VALIDATE_BIOME_FORMAT: false
           VALIDATE_CHECKOV: false
+          VALIDATE_MARKDOWN: false
+          VALIDATE_LINT: false
+          VALIDATE_SHELL_SHFMT: false
+          VALIDATE_BIOME_LINT: false

@@ -1,11 +1,52 @@
-name: Deployment Manifest 
-description: git action that maintains a deployment manifest of the matrix of environments, projects, versions, and statuses
+name: Deployment Manifest
+description:
+  git action that maintains a deployment manifest of the matrix of environments, apps, versions, and
+  statuses
 author: dkhunt27
 
 branding:
   icon: command
   color: blue
 
+# Define your inputs here.
+inputs:
+  command:
+    description: 'Deployment manifest command to run'
+    required: true
+    options:
+      - 'addNewDeployable'
+      - 'getDeployableList'
+      - 'markDeployed'
+
+  version:
+    description: 'Version of the deployable to work with'
+    required: true
+  actor:
+    description: 'Actor performing the deployment action'
+    required: true
+  appList:
+    description:
+      'App list to perform command against or restrict results to -- Comma-separated list of apps
+      (required for addNewDeployable,markDeployed commands)'
+    required: false
+    default: ''
+  env:
+    description: 'Env to perform command against (only for markDeployed command)'
+    required: false
+  deployedToProd:
+    description:
+      'Flag indicating if deployable was deployed to production (only for markDeployed command)'
+    required: false
+
+  deployableTable:
+    description: 'Name of the deployable table'
+    required: true
+  deployedTable:
+    description: 'Name of the deployed table'
+    required: true
+  region:
+    description: 'AWS region (defaults to us-east-1)'
+    required: false
 runs:
   using: node24
   main: dist/index.js
