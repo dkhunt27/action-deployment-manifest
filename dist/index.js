@@ -56679,11 +56679,15 @@ const run = async () => {
                         version: inputs.version,
                         appList: inputs.appList
                     });
-                    const deployableAppList = deployableList.map((record) => record.app);
-                    coreExports.setOutput('deployableAppList', deployableAppList.join(','));
-                    coreExports.setOutput('deployableList', JSON.stringify(deployableList));
-                    coreExports.info(`deployableAppList: ${deployableAppList.join(', ')}`);
-                    coreExports.info(`deployableList: ${JSON.stringify(deployableList)}`);
+                    const deployableAppList = deployableList.map((record) => record.app).join(',');
+                    const deployableListJson = JSON.stringify(deployableList);
+                    const hasDeployables = deployableList.length > 0;
+                    coreExports.setOutput('deployableAppList', deployableAppList);
+                    coreExports.setOutput('deployableList', deployableListJson);
+                    coreExports.setOutput('hasDeployables', hasDeployables);
+                    coreExports.info(`deployableAppList: ${deployableAppList}`);
+                    coreExports.info(`deployableList: ${deployableListJson}`);
+                    coreExports.info(`hasDeployables: ${hasDeployables}`);
                 }
                 break;
             case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:

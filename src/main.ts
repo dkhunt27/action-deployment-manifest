@@ -22,12 +22,17 @@ export const run = async (): Promise<void> => {
             appList: inputs.appList
           });
 
-          const deployableAppList = deployableList.map((record) => record.app);
-          core.setOutput('deployableAppList', deployableAppList.join(','));
-          core.setOutput('deployableList', JSON.stringify(deployableList));
+          const deployableAppList = deployableList.map((record) => record.app).join(',');
+          const deployableListJson = JSON.stringify(deployableList);
+          const hasDeployables = deployableList.length > 0;
 
-          core.info(`deployableAppList: ${deployableAppList.join(', ')}`);
-          core.info(`deployableList: ${JSON.stringify(deployableList)}`);
+          core.setOutput('deployableAppList', deployableAppList);
+          core.setOutput('deployableList', deployableListJson);
+          core.setOutput('hasDeployables', hasDeployables);
+
+          core.info(`deployableAppList: ${deployableAppList}`);
+          core.info(`deployableList: ${deployableListJson}`);
+          core.info(`hasDeployables: ${hasDeployables}`);
         }
         break;
       case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:
