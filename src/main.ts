@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { buildCommandService } from './factory.ts';
 import { parseInputs } from './inputs.ts';
 import { DeploymentManifestCommand } from './types.ts';
@@ -15,10 +16,19 @@ export const run = async (): Promise<void> => {
 
     switch (inputs.command) {
       case DeploymentManifestCommand.GET_DEPLOYABLE_LIST:
-        await commandService.getDeployableList({
-          version: inputs.version,
-          appList: inputs.appList
-        });
+        {
+          const deployableList = await commandService.getDeployableList({
+            version: inputs.version,
+            appList: inputs.appList
+          });
+
+          const deployableAppList = deployableList.map((record) => record.app);
+          core.setOutput('deployableAppList', deployableAppList.join(','));
+          core.setOutput('deployableList', JSON.stringify(deployableList));
+
+          core.info(`deployableAppList: ${deployableAppList.join(', ')}`);
+          core.info(`deployableList: ${JSON.stringify(deployableList)}`);
+        }
         break;
       case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:
         if (!inputs.appList || inputs.appList.length === 0) {

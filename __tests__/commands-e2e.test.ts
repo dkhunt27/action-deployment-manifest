@@ -16,7 +16,7 @@ describe.skip('CommandService e2e tests', () => {
     // mock using localstack
     const config: DynamoDBClientConfig = {
       endpoint: 'http://localhost.localstack.cloud:4566',
-      awsRegion: 'us-east-1'
+      region: 'us-east-1'
     };
 
     service = await buildCommandService({ deployableTable, deployedTable, config });

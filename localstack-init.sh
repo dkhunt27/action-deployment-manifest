@@ -1,11 +1,15 @@
 #!/bin/bash
 
+REGION="us-east-1"
+DEPLOYABLE_TABLE="deployable"
+DEPLOYED_TABLE="deployed"
+
 aws dynamodb create-table \
     --endpoint-url=http://localhost.localstack.cloud:4566 \
     --no-cli-pager \
     --billing-mode PAY_PER_REQUEST \
-    --table-name deployable \
-    --region us-east-1 \
+    --table-name $DEPLOYABLE_TABLE \
+    --region $REGION \
     --attribute-definitions \
         AttributeName=id,AttributeType=S \
         AttributeName=version,AttributeType=S \
@@ -57,8 +61,8 @@ aws dynamodb create-table \
     --endpoint-url=http://localhost.localstack.cloud:4566 \
     --no-cli-pager \
     --billing-mode PAY_PER_REQUEST \
-    --table-name deployed \
-    --region us-east-1 \
+    --table-name $DEPLOYED_TABLE \
+    --region $REGION \
     --attribute-definitions \
         AttributeName=id,AttributeType=S \
         AttributeName=version,AttributeType=S \
@@ -105,6 +109,9 @@ aws dynamodb create-table \
         }
         ]'
 
-aws dynamodb list-tables --endpoint-url=http://localhost.localstack.cloud:4566 --region=us-east-1 --no-cli-pager
+aws dynamodb list-tables \
+    --endpoint-url=http://localhost.localstack.cloud:4566 \
+    --region=$REGION \
+    --no-cli-pager
 
 echo "DynamoDB tables created in LocalStack."

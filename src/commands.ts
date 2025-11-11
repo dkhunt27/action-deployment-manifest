@@ -58,6 +58,8 @@ export class CommandService {
         actor
       });
     }
+
+    core.info(`Command completed`);
   };
 
   /**
@@ -105,6 +107,8 @@ export class CommandService {
 
       const filtered =
         appList.length > 0 ? records.filter((item) => appList.includes(item.app)) : records;
+
+      core.info(`Command completed`);
 
       return filtered;
     } catch (error) {
@@ -219,6 +223,8 @@ export class CommandService {
           });
         }
       }
+
+      core.info(`Command completed`);
     } catch (error) {
       const errMsg = `markDeployed error: ${error}`;
       throw setFailedAndCreateError(errMsg);
