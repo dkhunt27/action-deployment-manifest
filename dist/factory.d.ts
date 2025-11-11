@@ -3,6 +3,6 @@ import { CommandService } from './commands.ts';
 export declare const buildCommandService: (params: {
     deployableTable: string;
     deployedTable: string;
-    region?: string;
+    awsRegion?: string;
     config?: DynamoDBClientConfig;
 }) => Promise<CommandService>;

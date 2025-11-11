@@ -10,7 +10,7 @@ export const run = async (): Promise<void> => {
     const commandService = await buildCommandService({
       deployableTable: inputs.deployableTable,
       deployedTable: inputs.deployedTable,
-      region: inputs.region
+      awsRegion: inputs.awsRegion
     });
 
     switch (inputs.command) {

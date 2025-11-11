@@ -40,5 +40,5 @@ export type DeploymentManifestInputs = {
     deployedToProd?: boolean;
     deployableTable: string;
     deployedTable: string;
-    region: string;
+    awsRegion: string;
 };

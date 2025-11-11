@@ -10,10 +10,10 @@ import { QueryUtilities } from './utilities-query.ts';
 export const buildCommandService = async (params: {
   deployableTable: string;
   deployedTable: string;
-  region?: string;
+  awsRegion?: string;
   config?: DynamoDBClientConfig;
 }): Promise<CommandService> => {
-  const { deployableTable, deployedTable, config = { region: params.region } } = params;
+  const { deployableTable, deployedTable, config = { region: params.awsRegion } } = params;
 
   try {
     const configService = new ConfigService(deployableTable, deployedTable);

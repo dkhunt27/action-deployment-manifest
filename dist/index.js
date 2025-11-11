@@ -56612,7 +56612,7 @@ class QueryUtilities {
 }
 
 const buildCommandService = async (params) => {
-    const { deployableTable, deployedTable, config = { region: params.region } } = params;
+    const { deployableTable, deployedTable, config = { region: params.awsRegion } } = params;
     try {
         const configService = new ConfigService(deployableTable, deployedTable);
         const awsService = new AwsService(config);
@@ -56639,15 +56639,15 @@ const parseInputs = () => {
     const version = coreExports.getInput('version', { required: true });
     const actor = coreExports.getInput('actor', { required: true });
     const env = coreExports.getInput('env', { required: false });
-    const deployedToProd = coreExports.getBooleanInput('deployedToProd', {
+    const deployedToProd = coreExports.getInput('deployedToProd', {
         required: false
-    });
+    }) === 'true';
     const appList = coreExports.getInput('appList', { required: false })
         .split(',')
         .filter((app) => app.length > 0);
     const deployableTable = coreExports.getInput('deployableTable', { required: true });
     const deployedTable = coreExports.getInput('deployedTable', { required: true });
-    const region = coreExports.getInput('region', { required: false }) ?? 'us-east-1';
+    const awsRegion = coreExports.getInput('awsRegion', { required: false }) ?? 'us-east-1';
     return {
         command,
         version,
@@ -56657,7 +56657,7 @@ const parseInputs = () => {
         deployedToProd,
         deployableTable,
         deployedTable,
-        region
+        awsRegion
     };
 };
 
@@ -56667,7 +56667,7 @@ const run = async () => {
         const commandService = await buildCommandService({
             deployableTable: inputs.deployableTable,
             deployedTable: inputs.deployedTable,
-            region: inputs.region
+            awsRegion: inputs.awsRegion
         });
         switch (inputs.command) {
             case DeploymentManifestCommand.GET_DEPLOYABLE_LIST:

@@ -35,7 +35,8 @@ inputs:
     required: false
   deployedToProd:
     description:
-      'Flag indicating if deployable was deployed to production (only for markDeployed command)'
+      '"true": deployable was deployed to production; "false": it was not (only for markDeployed
+      command)'
     required: false
 
   deployableTable:
@@ -44,7 +45,7 @@ inputs:
   deployedTable:
     description: 'Name of the deployed table'
     required: true
-  region:
+  awsRegion:
     description: 'AWS region (defaults to us-east-1)'
     required: false
 runs:

@@ -15,9 +15,10 @@ export const parseInputs = (): DeploymentManifestInputs => {
   const version = core.getInput('version', { required: true });
   const actor = core.getInput('actor', { required: true });
   const env = core.getInput('env', { required: false });
-  const deployedToProd = core.getBooleanInput('deployedToProd', {
-    required: false
-  });
+  const deployedToProd =
+    core.getInput('deployedToProd', {
+      required: false
+    }) === 'true';
   const appList = core
     .getInput('appList', { required: false })
     .split(',')
@@ -25,7 +26,7 @@ export const parseInputs = (): DeploymentManifestInputs => {
 
   const deployableTable = core.getInput('deployableTable', { required: true });
   const deployedTable = core.getInput('deployedTable', { required: true });
-  const region = core.getInput('region', { required: false }) ?? 'us-east-1';
+  const awsRegion = core.getInput('awsRegion', { required: false }) ?? 'us-east-1';
 
   return {
     command,
@@ -36,6 +37,6 @@ export const parseInputs = (): DeploymentManifestInputs => {
     deployedToProd,
     deployableTable,
     deployedTable,
-    region
+    awsRegion
   };
 };
