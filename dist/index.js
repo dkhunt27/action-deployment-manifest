@@ -56679,13 +56679,16 @@ const run = async () => {
                         version: inputs.version,
                         appList: inputs.appList
                     });
-                    const deployableAppList = deployableList.map((record) => record.app).join(',');
+                    const deployableAppListString = deployableList.map((record) => record.app).join(',');
+                    const deployableAppList = deployableList.map((record) => record.app);
                     const deployableListJson = JSON.stringify(deployableList);
                     const hasDeployables = deployableList.length > 0;
                     coreExports.setOutput('deployableAppList', deployableAppList);
+                    coreExports.setOutput('deployableAppListString', deployableAppListString);
                     coreExports.setOutput('deployableList', deployableListJson);
                     coreExports.setOutput('hasDeployables', hasDeployables);
                     coreExports.info(`deployableAppList: ${deployableAppList}`);
+                    coreExports.info(`deployableAppListString: ${deployableAppListString}`);
                     coreExports.info(`deployableList: ${deployableListJson}`);
                     coreExports.info(`hasDeployables: ${hasDeployables}`);
                 }

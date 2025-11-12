@@ -22,15 +22,18 @@ export const run = async (): Promise<void> => {
             appList: inputs.appList
           });
 
-          const deployableAppList = deployableList.map((record) => record.app).join(',');
+          const deployableAppListString = deployableList.map((record) => record.app).join(',');
+          const deployableAppList = deployableList.map((record) => record.app);
           const deployableListJson = JSON.stringify(deployableList);
           const hasDeployables = deployableList.length > 0;
 
           core.setOutput('deployableAppList', deployableAppList);
+          core.setOutput('deployableAppListString', deployableAppListString);
           core.setOutput('deployableList', deployableListJson);
           core.setOutput('hasDeployables', hasDeployables);
 
           core.info(`deployableAppList: ${deployableAppList}`);
+          core.info(`deployableAppListString: ${deployableAppListString}`);
           core.info(`deployableList: ${deployableListJson}`);
           core.info(`hasDeployables: ${hasDeployables}`);
         }
