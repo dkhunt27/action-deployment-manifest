@@ -29,12 +29,12 @@ export const run = async (): Promise<void> => {
           const hasDeployables = deployableList.length > 0;
 
           core.setOutput('hasDeployables', hasDeployables);
-          core.setOutput('deployablesJson', deployablesJson);
-          core.setOutput('deployablesFullJson', deployablesFullJson);
+          core.setOutput('deployables', deployablesJson);
+          core.setOutput('deployablesFull', deployablesFullJson);
 
           core.info(`hasDeployables: ${hasDeployables}`);
-          core.info(`deployablesJson: ${deployablesJson}`);
-          core.info(`deployablesFullJson: ${deployablesFullJson}`);
+          core.info(`deployables: ${deployablesJson}`);
+          core.info(`deployablesFull: ${deployablesFullJson}`);
         }
         break;
       case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:

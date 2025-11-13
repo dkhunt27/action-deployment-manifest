@@ -56691,11 +56691,11 @@ const run = async () => {
                     const deployablesJson = JSON.stringify(deployableList.map((d) => ({ deployable: d.deployable, version: d.version })));
                     const hasDeployables = deployableList.length > 0;
                     coreExports.setOutput('hasDeployables', hasDeployables);
-                    coreExports.setOutput('deployablesJson', deployablesJson);
-                    coreExports.setOutput('deployablesFullJson', deployablesFullJson);
+                    coreExports.setOutput('deployables', deployablesJson);
+                    coreExports.setOutput('deployablesFull', deployablesFullJson);
                     coreExports.info(`hasDeployables: ${hasDeployables}`);
-                    coreExports.info(`deployablesJson: ${deployablesJson}`);
-                    coreExports.info(`deployablesFullJson: ${deployablesFullJson}`);
+                    coreExports.info(`deployables: ${deployablesJson}`);
+                    coreExports.info(`deployablesFull: ${deployablesFullJson}`);
                 }
                 break;
             case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:
