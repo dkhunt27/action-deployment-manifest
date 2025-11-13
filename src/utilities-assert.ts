@@ -4,56 +4,58 @@ import type { QueryUtilities } from './utilities-query.ts';
 export class AssertUtilities {
   constructor(private readonly queryUtils: QueryUtilities) {}
 
-  assertAppVersionDoesNotExist = async <T extends { app: string }>(params: {
+  assertDeployableVersionDoesNotExist = async <T extends { deployable: string }>(params: {
     version: string;
-    appList: string[];
+    deployables: string[];
     table: string;
   }): Promise<void> => {
-    const { version, appList, table } = params;
+    const { version, deployables, table } = params;
 
     const records = await this.queryUtils.queryRecordsByVersion<T>({
       table,
       version
     });
 
-    // Check that each app in appList does not exists for this version
-    for (const app of appList) {
-      const matchingRecords = records.filter((record) => record.app === app);
+    // Check that each deployable in deployables does not exists for this version
+    for (const deployable of deployables) {
+      const matchingRecords = records.filter((record) => record.deployable === deployable);
 
       if (matchingRecords.length >= 1) {
-        const errMsg = `assertAppVersionDoesNotExist (table: ${table}):: record(s) (${matchingRecords.length}) found for version: ${version} and app: ${app}`;
+        const errMsg = `assertDeployableVersionDoesNotExist (table: ${table}):: record(s) (${matchingRecords.length}) found for version: ${version} and deployable: ${deployable}`;
         throw setFailedAndCreateError(errMsg);
       }
     }
   };
 
-  assertAppVersionExistsExactlyOnce = async <T extends { app: string }>(params: {
+  assertDeployableVersionExistsExactlyOnce = async <T extends { deployable: string }>(params: {
     version: string;
-    appList: string[];
+    deployables: string[];
     table: string;
   }): Promise<void> => {
-    const { version, appList, table } = params;
+    const { version, deployables, table } = params;
 
     const records = await this.queryUtils.queryRecordsByVersion<T>({
       table,
       version
     });
 
-    this.assertAppVersionRecordsExistsExactlyOnce({
+    this.assertDeployableVersionRecordsExistsExactlyOnce({
       records,
       version,
-      appList,
+      deployables,
       table
     });
   };
 
-  assertAppVersionRecordsExistsExactlyOnce = async <T extends { app: string }>(params: {
+  assertDeployableVersionRecordsExistsExactlyOnce = async <
+    T extends { deployable: string }
+  >(params: {
     records: T[];
     version: string;
-    appList: string[];
+    deployables: string[];
     table: string;
   }): Promise<void> => {
-    const { version, appList, table } = params;
+    const { version, deployables, table } = params;
 
     const records = await this.queryUtils.queryRecordsByVersion<T>({
       table,
@@ -61,67 +63,67 @@ export class AssertUtilities {
     });
 
     if (!records || records.length === 0) {
-      const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;
+      const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;
       throw setFailedAndCreateError(errMsg);
     }
 
-    // IN is not support in DynamoDb queries, so we have to check appList manually
-    // Check that each app in appList exists exactly once for this version
-    for (const app of appList) {
-      const matchingRecords = records.filter((record) => record.app === app);
+    // IN is not support in DynamoDb queries, so we have to check deployables manually
+    // Check that each deployable in deployables exists exactly once for this version
+    for (const deployable of deployables) {
+      const matchingRecords = records.filter((record) => record.deployable === deployable);
 
       if (matchingRecords.length === 0) {
-        const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: no record found for version: ${version} and app: ${app}`;
+        const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: no record found for version: ${version} and deployable: ${deployable}`;
         throw setFailedAndCreateError(errMsg);
       }
 
       if (matchingRecords.length > 1) {
-        const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and app: ${app}`;
+        const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and deployable: ${deployable}`;
         throw setFailedAndCreateError(errMsg);
       }
     }
   };
 
-  assertAppVersionExistsOnceAtMost = async <T extends { app: string }>(params: {
+  assertDeployableVersionExistsOnceAtMost = async <T extends { deployable: string }>(params: {
     version: string;
-    appList: string[];
+    deployables: string[];
     table: string;
   }): Promise<void> => {
-    const { table, version, appList } = params;
+    const { table, version, deployables } = params;
 
     const records = await this.queryUtils.queryRecordsByVersion<T>({
       table,
       version
     });
 
-    // IN is not support in DynamoDb queries, so we have to check appList manually
-    // Check that each app in appList exists at most once for this version
-    for (const app of appList) {
-      const matchingRecords = records.filter((record) => record.app === app);
+    // IN is not support in DynamoDb queries, so we have to check deployables manually
+    // Check that each deployable in deployables exists at most once for this version
+    for (const deployable of deployables) {
+      const matchingRecords = records.filter((record) => record.deployable === deployable);
 
       if (matchingRecords.length > 1) {
-        const errMsg = `assertAppVersionExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and app: ${app}`;
+        const errMsg = `assertDeployableVersionExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and deployable: ${deployable}`;
         throw setFailedAndCreateError(errMsg);
       }
     }
   };
 
-  assertAppEnvExistsOnceAtMost = async <T extends { app: string }>(params: {
+  assertDeployableEnvExistsOnceAtMost = async <T extends { deployable: string }>(params: {
     env: string;
-    appList: string[];
+    deployables: string[];
     table: string;
   }): Promise<void> => {
-    const { table, env, appList } = params;
+    const { table, env, deployables } = params;
 
     const records = await this.queryUtils.queryRecordsByEnv<T>({ table, env });
 
-    // IN is not support in DynamoDb queries, so we have to check appList manually
-    // Check that each app in appList exists at most once for this version
-    for (const app of appList) {
-      const matchingRecords = records.filter((record) => record.app === app);
+    // IN is not support in DynamoDb queries, so we have to check deployables manually
+    // Check that each deployable in deployables exists at most once for this version
+    for (const deployable of deployables) {
+      const matchingRecords = records.filter((record) => record.deployable === deployable);
 
       if (matchingRecords.length > 1) {
-        const errMsg = `assertAppEnvExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for env: ${env} and app: ${app}`;
+        const errMsg = `assertDeployableEnvExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for env: ${env} and deployable: ${deployable}`;
         throw setFailedAndCreateError(errMsg);
       }
     }

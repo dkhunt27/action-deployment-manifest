@@ -27,7 +27,7 @@ describe.skip('CommandService e2e tests', () => {
     await expect(
       service.addNewDeployable({
         version: '1.0.0',
-        appList: ['app1', 'app2', 'app3'],
+        deployables: ['app1', 'app2', 'app3'],
         actor: 'test-user'
       })
     ).resolves.toBeUndefined();
@@ -37,7 +37,7 @@ describe.skip('CommandService e2e tests', () => {
       service.markDeployed({
         version: '1.0.0',
         env: 'dev',
-        appList: ['app1', 'app2', 'app3'],
+        deployables: ['app1', 'app2', 'app3'],
         actor: 'test-user',
         deployedToProd: false
       })
@@ -48,7 +48,7 @@ describe.skip('CommandService e2e tests', () => {
       service.markDeployed({
         version: '1.0.0',
         env: 'qa',
-        appList: ['app1', 'app2', 'app3'],
+        deployables: ['app1', 'app2', 'app3'],
         actor: 'test-user',
         deployedToProd: false
       })
@@ -59,7 +59,7 @@ describe.skip('CommandService e2e tests', () => {
       service.markDeployed({
         version: '1.0.0',
         env: 'prod',
-        appList: ['app1', 'app2', 'app3'],
+        deployables: ['app1', 'app2', 'app3'],
         actor: 'test-user',
         deployedToProd: true
       })
@@ -69,7 +69,7 @@ describe.skip('CommandService e2e tests', () => {
   test('simulate v1.1 deployed to prod, v1.2 deployed to qa, v1.3 deployed to dev', async () => {
     const params1 = {
       version: '1.1.0',
-      appList: ['app1', 'app2', 'app3'],
+      deployables: ['app1', 'app2', 'app3'],
       actor: 'test-user'
     };
 
@@ -90,7 +90,7 @@ describe.skip('CommandService e2e tests', () => {
     let params2 = {
       version: '1.1.0',
       env: 'dev',
-      appList: ['app1', 'app2', 'app3'],
+      deployables: ['app1', 'app2', 'app3'],
       actor: 'test-user',
       deployedToProd: false
     };
@@ -105,7 +105,7 @@ describe.skip('CommandService e2e tests', () => {
     params2 = {
       version: '1.2.0',
       env: 'dev',
-      appList: ['app1', 'app2', 'app3'],
+      deployables: ['app1', 'app2', 'app3'],
       actor: 'test-user',
       deployedToProd: false
     };
@@ -117,7 +117,7 @@ describe.skip('CommandService e2e tests', () => {
     params2 = {
       version: '1.3.0',
       env: 'dev',
-      appList: ['app1', 'app2', 'app3'],
+      deployables: ['app1', 'app2', 'app3'],
       actor: 'test-user',
       deployedToProd: false
     };
@@ -128,7 +128,7 @@ describe.skip('CommandService e2e tests', () => {
   test('simulate v1.2 deployed to prod, v1.3 deployed to qa, v1.4 deployed to dev', async () => {
     const params1 = {
       version: '1.4.0',
-      appList: ['app1', 'app2', 'app3'],
+      deployables: ['app1', 'app2', 'app3'],
       actor: 'test-user'
     };
 
@@ -139,7 +139,7 @@ describe.skip('CommandService e2e tests', () => {
 
     const params2 = {
       env: 'dev',
-      appList: ['app1', 'app2', 'app3'],
+      deployables: ['app1', 'app2', 'app3'],
       actor: 'test-user',
       deployedToProd: false
     };

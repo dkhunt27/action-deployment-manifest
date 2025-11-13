@@ -56,9 +56,9 @@ describe('CommandService', () => {
     );
 
     // set happy path for mocks
-    mockAssertUtils.assertAppVersionDoesNotExist.mockResolvedValue(undefined);
-    mockAssertUtils.assertAppVersionExistsExactlyOnce.mockResolvedValue(undefined);
-    mockAssertUtils.assertAppEnvExistsOnceAtMost.mockResolvedValue(undefined);
+    mockAssertUtils.assertDeployableVersionDoesNotExist.mockResolvedValue(undefined);
+    mockAssertUtils.assertDeployableVersionExistsExactlyOnce.mockResolvedValue(undefined);
+    mockAssertUtils.assertDeployableEnvExistsOnceAtMost.mockResolvedValue(undefined);
     mockQueryUtils.queryRecordsByVersion.mockResolvedValue([]);
     mockCommandUtils.putDeployableRecord.mockResolvedValue(undefined);
     mockCommandUtils.putDeployedRecord.mockResolvedValue(undefined);
@@ -78,13 +78,13 @@ describe('CommandService', () => {
   describe('addNewDeployable', () => {
     let params: {
       version: string;
-      appList: string[];
+      deployables: string[];
       actor: string;
     };
     beforeEach(() => {
       params = {
         version: '1.0.0',
-        appList: ['app1', 'app2'],
+        deployables: ['app1', 'app2'],
         actor: 'test-user'
       };
     });
@@ -96,17 +96,17 @@ describe('CommandService', () => {
       expect(mockCommandUtils.putDeployableRecord.mock.calls).toMatchSnapshot();
     });
 
-    test('should throw error when appList is empty', async () => {
-      params.appList = [];
+    test('should throw error when deployables is empty', async () => {
+      params.deployables = [];
       await expect(commandService.addNewDeployable(params)).rejects.toThrow(
-        'appList cannot be empty'
+        'deployables cannot be empty'
       );
 
       expect(mockCommandUtils.putDeployableRecord).not.toHaveBeenCalled();
     });
 
     test('should throw error when assert throws', async () => {
-      mockAssertUtils.assertAppVersionDoesNotExist.mockImplementation(() => {
+      mockAssertUtils.assertDeployableVersionDoesNotExist.mockImplementation(() => {
         throw new Error('someError');
       });
       await expect(commandService.addNewDeployable(params)).rejects.toThrow('someError');
@@ -118,19 +118,19 @@ describe('CommandService', () => {
   describe('getDeployableList', () => {
     let params: {
       version: string;
-      appList?: string[];
+      deployables?: string[];
     };
     beforeEach(() => {
       const prodRecords = [
-        { id: '1.0.0|app1', version: '1.0.0', app: 'app1', status: 'prod' },
-        { id: '1.0.1|app2', version: '1.0.1', app: 'app2', status: 'prod' }
+        { id: '1.0.0|app1', version: '1.0.0', deployable: 'app1', status: 'prod' },
+        { id: '1.0.1|app2', version: '1.0.1', deployable: 'app2', status: 'prod' }
       ];
       const nonProdRecords = [
-        { id: '1.0.2|app1', version: '1.0.2', app: 'app1', status: 'available' },
-        { id: '1.0.2|app2', version: '1.0.2', app: 'app2', status: 'rejected' },
-        { id: '1.0.2|app3', version: '1.0.2', app: 'app3', status: 'pending' },
-        { id: '1.0.2|app4', version: '1.0.2', app: 'app4', status: 'available' },
-        { id: '1.0.2|app5', version: '1.0.2', app: 'app5', status: 'available' }
+        { id: '1.0.2|app1', version: '1.0.2', deployable: 'app1', status: 'available' },
+        { id: '1.0.2|app2', version: '1.0.2', deployable: 'app2', status: 'rejected' },
+        { id: '1.0.2|app3', version: '1.0.2', deployable: 'app3', status: 'pending' },
+        { id: '1.0.2|app4', version: '1.0.2', deployable: 'app4', status: 'available' },
+        { id: '1.0.2|app5', version: '1.0.2', deployable: 'app5', status: 'available' }
       ];
       mockQueryUtils.queryRecordsByStatus.mockResolvedValue(prodRecords);
       mockQueryUtils.queryRecordsByVersion.mockResolvedValue(nonProdRecords);
@@ -140,8 +140,8 @@ describe('CommandService', () => {
       await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
     });
 
-    test('should return app prod records when version is latest and appList provided', async () => {
-      params = { version: 'latest', appList: ['app1'] };
+    test('should return deployable prod records when version is latest and deployables provided', async () => {
+      params = { version: 'latest', deployables: ['app1'] };
       await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
     });
 
@@ -150,8 +150,8 @@ describe('CommandService', () => {
       await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
     });
 
-    test('should filter by appList when provided', async () => {
-      params = { version: '1.0.2', appList: ['app4', 'app5'] };
+    test('should filter by deployables when provided', async () => {
+      params = { version: '1.0.2', deployables: ['app4', 'app5'] };
       await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
     });
   });
@@ -160,7 +160,7 @@ describe('CommandService', () => {
     let params: {
       version: string;
       env: string;
-      appList: string[];
+      deployables: string[];
       actor: string;
       deployedToProd: boolean;
     };
@@ -169,7 +169,7 @@ describe('CommandService', () => {
       params = {
         version: '1.0.0',
         env: 'staging',
-        appList: ['app1', 'app2'],
+        deployables: ['app1', 'app2'],
         actor: 'test-user',
         deployedToProd: false
       };
@@ -179,7 +179,7 @@ describe('CommandService', () => {
         {
           id: '1.0.0|app1',
           version: '1.0.0',
-          app: 'app1',
+          deployable: 'app1',
           status: DeploymentStatus.AVAILABLE,
           modifiedDate: new Date().toISOString(),
           modifiedBy: 'test'
@@ -187,7 +187,7 @@ describe('CommandService', () => {
         {
           id: '1.0.0|app2',
           version: '1.0.0',
-          app: 'app2',
+          deployable: 'app2',
           status: DeploymentStatus.AVAILABLE,
           modifiedDate: new Date().toISOString(),
           modifiedBy: 'test'
@@ -199,7 +199,7 @@ describe('CommandService', () => {
       await commandService.markDeployed(params);
 
       expect(mockInfo).toHaveBeenCalledWith(
-        'Marking deployed to staging for version 1.0.0 (deployedToProd: false) restricting to apps: app1, app2'
+        'Marking deployed to staging for version 1.0.0 (deployedToProd: false) restricting to deployables: app1, app2'
       );
 
       expect(mockCommandUtils.putDeployedRecord.mock.calls).toMatchSnapshot();
@@ -224,22 +224,22 @@ describe('CommandService', () => {
       expect(mockCommandUtils.updateDeployableProdRecordToRollback.mock.calls).toMatchSnapshot();
     });
 
-    test('should handle single app deployment', async () => {
-      params.appList = ['single-app'];
+    test('should handle single deployable deployment', async () => {
+      params.deployables = ['appA'];
 
       await commandService.markDeployed(params);
 
       expect(mockCommandUtils.putDeployedRecord).toHaveBeenCalledTimes(1);
       expect(mockCommandUtils.putDeployedRecord).toHaveBeenCalledWith({
         env: 'staging',
-        app: 'single-app',
+        deployable: 'appA',
         version: '1.0.0',
         actor: 'test-user'
       });
     });
 
-    test('should throw error when assertAppVersionExistsExactlyOnce fails', async () => {
-      mockAssertUtils.assertAppVersionExistsExactlyOnce.mockImplementation(() => {
+    test('should throw error when assertDeployableVersionExistsExactlyOnce fails', async () => {
+      mockAssertUtils.assertDeployableVersionExistsExactlyOnce.mockImplementation(() => {
         throw new Error('Version does not exist');
       });
 
@@ -248,8 +248,8 @@ describe('CommandService', () => {
       expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
     });
 
-    test('should throw error when assertAppEnvExistsOnceAtMost fails', async () => {
-      mockAssertUtils.assertAppEnvExistsOnceAtMost.mockImplementation(() => {
+    test('should throw error when assertDeployableEnvExistsOnceAtMost fails', async () => {
+      mockAssertUtils.assertDeployableEnvExistsOnceAtMost.mockImplementation(() => {
         throw new Error('Multiple env records exist');
       });
 
@@ -275,13 +275,13 @@ describe('CommandService', () => {
     test('should process all apps in prod deployment even with multiple status transitions', async () => {
       params.deployedToProd = true;
       params.env = 'prod';
-      params.appList = ['app1', 'app2', 'app3'];
+      params.deployables = ['app1', 'app2', 'app3'];
 
       mockCommandUtils.getRelevantDeployableRecordsForMarkDeployed.mockResolvedValue([
         {
           id: '0.9.0|app1',
           version: '0.9.0',
-          app: 'app1',
+          deployable: 'app1',
           status: DeploymentStatus.PROD,
           modifiedDate: new Date().toISOString(),
           modifiedBy: 'test'
@@ -292,7 +292,7 @@ describe('CommandService', () => {
         {
           id: '0.8.0|app1',
           version: '0.8.0',
-          app: 'app1',
+          deployable: 'app1',
           status: DeploymentStatus.ROLLBACK,
           modifiedDate: new Date().toISOString(),
           modifiedBy: 'test'
@@ -303,7 +303,7 @@ describe('CommandService', () => {
         {
           id: '1.0.0|app1',
           version: '1.0.0',
-          app: 'app1',
+          deployable: 'app1',
           status: DeploymentStatus.AVAILABLE,
           modifiedDate: new Date().toISOString(),
           modifiedBy: 'test'

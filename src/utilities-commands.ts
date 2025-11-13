@@ -22,20 +22,20 @@ export class CommandUtilities {
   }
 
   getRelevantDeployableRecordsForMarkDeployed = async (params: {
-    app: string;
+    deployable: string;
     version: string;
     deployableTable: string;
   }): Promise<DeployableRecordType[]> => {
-    const { app, version, deployableTable } = params;
+    const { deployable, version, deployableTable } = params;
 
-    // get all deployable records for this app
-    const appRecords = await this.queryUtils.queryRecordsByApp<DeployableRecordType>({
+    // get all deployable records for this deployable
+    const deployables = await this.queryUtils.queryRecordsByDeployable<DeployableRecordType>({
       table: deployableTable,
-      app
+      deployable
     });
 
     // keep records that match version or have status rollback or prod
-    const relevantRecords = appRecords.filter(
+    const relevantRecords = deployables.filter(
       (record) =>
         record.version === version ||
         record.status === DeploymentStatus.ROLLBACK ||
@@ -47,17 +47,17 @@ export class CommandUtilities {
 
   updateDeployableRollbackRecordToDecommissioned = async (params: {
     records: DeployableRecordType[];
-    app: string;
+    deployable: string;
     deployableTable: string;
     actor: string;
   }): Promise<void> => {
-    const { records, app, deployableTable, actor } = params;
+    const { records, deployable, deployableTable, actor } = params;
 
-    // Find records with rollback status for this app and update to decommissioned
+    // Find records with rollback status for this deployable and update to decommissioned
     const rollbackRecords = records.filter((record) => record.status === DeploymentStatus.ROLLBACK);
 
     if (rollbackRecords.length > 1) {
-      const errMsg = `updateDeployableRollbackRecordToDecommissioned error: multiple rollback records found for app ${app} when only one expected`;
+      const errMsg = `updateDeployableRollbackRecordToDecommissioned error: multiple rollback records found for deployable ${deployable} when only one expected`;
       throw setFailedAndCreateError(errMsg);
     }
 
@@ -84,17 +84,17 @@ export class CommandUtilities {
 
   updateDeployableProdRecordToRollback = async (params: {
     records: DeployableRecordType[];
-    app: string;
+    deployable: string;
     deployableTable: string;
     actor: string;
   }): Promise<void> => {
-    const { records, app, deployableTable, actor } = params;
+    const { records, deployable, deployableTable, actor } = params;
 
-    // Find records with rollback status for this app and update to decommissioned
+    // Find records with rollback status for this deployable and update to decommissioned
     const prodRecords = records.filter((record) => record.status === DeploymentStatus.PROD);
 
     if (prodRecords.length > 1) {
-      const errMsg = `updateDeployableProdRecordToRollback error: multiple prod records found for app ${app} when only one expected`;
+      const errMsg = `updateDeployableProdRecordToRollback error: multiple prod records found for deployable ${deployable} when only one expected`;
       throw setFailedAndCreateError(errMsg);
     }
 
@@ -122,18 +122,18 @@ export class CommandUtilities {
   updateDeployableVersionRecordToStatus = async (params: {
     deployableTable: string;
     records: DeployableRecordType[];
-    app: string;
+    deployable: string;
     version: string;
     actor: string;
     status: DeploymentStatus;
   }): Promise<void> => {
-    const { records, app, version, deployableTable, actor, status } = params;
+    const { records, deployable, version, deployableTable, actor, status } = params;
 
-    // Find records with rollback status for this app and update to decommissioned
+    // Find records with rollback status for this deployable and update to decommissioned
     const versionRecords = records.filter((record) => record.version === version);
 
     if (versionRecords.length > 1) {
-      const errMsg = `updateDeployableVersionRecordToStatus error: multiple version records found for app ${app} / version ${version} when only one expected`;
+      const errMsg = `updateDeployableVersionRecordToStatus error: multiple version records found for deployable ${deployable} / version ${version} when only one expected`;
       throw setFailedAndCreateError(errMsg);
     }
 
@@ -159,17 +159,17 @@ export class CommandUtilities {
   };
 
   putDeployableRecord = async (params: {
-    app: string;
+    deployable: string;
     version: string;
     status: DeploymentStatus;
     actor: string;
   }): Promise<void> => {
-    const { app, version, status, actor } = params;
+    const { deployable, version, status, actor } = params;
 
     const item: DeployableRecordType = {
-      id: buildDeployableKey({ app, version }),
+      id: buildDeployableKey({ deployable, version }),
       version,
-      app,
+      deployable,
       status: status,
       modifiedDate: new Date().toISOString(),
       modifiedBy: actor
@@ -190,16 +190,16 @@ export class CommandUtilities {
 
   putDeployedRecord = async (params: {
     env: string;
-    app: string;
+    deployable: string;
     version: string;
     actor: string;
   }): Promise<void> => {
-    const { env, app, version, actor } = params;
+    const { env, deployable, version, actor } = params;
 
     const item: DeployedRecordType = {
-      id: buildDeployedKey({ app, env }),
+      id: buildDeployedKey({ deployable, env }),
       env,
-      app,
+      deployable,
       version,
       deployedDate: new Date().toISOString(),
       deployedBy: actor

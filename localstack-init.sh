@@ -13,7 +13,7 @@ aws dynamodb create-table \
     --attribute-definitions \
         AttributeName=id,AttributeType=S \
         AttributeName=version,AttributeType=S \
-        AttributeName=app,AttributeType=S \
+        AttributeName=deployable,AttributeType=S \
         AttributeName=status,AttributeType=S \
     --key-schema AttributeName=id,KeyType=HASH \
     --global-secondary-indexes \
@@ -31,10 +31,10 @@ aws dynamodb create-table \
             }
         },
         {
-            "IndexName": "app-index",
+            "IndexName": "deployable-index",
             "KeySchema": [
                 {
-                    "AttributeName": "app",
+                    "AttributeName": "deployable",
                     "KeyType": "HASH"
                 }
             ],
@@ -66,7 +66,7 @@ aws dynamodb create-table \
     --attribute-definitions \
         AttributeName=id,AttributeType=S \
         AttributeName=version,AttributeType=S \
-        AttributeName=app,AttributeType=S \
+        AttributeName=deployable,AttributeType=S \
         AttributeName=env,AttributeType=S \
     --key-schema AttributeName=id,KeyType=HASH \
     --global-secondary-indexes \
@@ -84,10 +84,10 @@ aws dynamodb create-table \
             }
         },
         {
-            "IndexName": "app-index",
+            "IndexName": "deployable-index",
             "KeySchema": [
                 {
-                    "AttributeName": "app",
+                    "AttributeName": "deployable",
                     "KeyType": "HASH"
                 }
             ],

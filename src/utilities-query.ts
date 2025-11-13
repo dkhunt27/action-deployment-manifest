@@ -5,7 +5,7 @@ import { setFailedAndCreateError } from './utilities.ts';
 const ENV_INDEX_NAME = 'env-index';
 const VERSION_INDEX_NAME = 'version-index';
 const STATUS_INDEX_NAME = 'status-index';
-const APP_INDEX_NAME = 'app-index';
+const DEPLOYABLE_INDEX_NAME = 'deployable-index';
 
 export class QueryUtilities {
   constructor(private readonly awsService: AwsService) {}
@@ -31,23 +31,26 @@ export class QueryUtilities {
     }
   };
 
-  queryRecordsByApp = async <T>(params: { table: string; app: string }): Promise<T[]> => {
-    const { table, app } = params;
+  queryRecordsByDeployable = async <T>(params: {
+    table: string;
+    deployable: string;
+  }): Promise<T[]> => {
+    const { table, deployable } = params;
 
     let result: Record<string, unknown>[];
     try {
       const input: QueryCommandInput = {
         TableName: table,
-        IndexName: APP_INDEX_NAME,
-        KeyConditionExpression: 'app = :app',
+        IndexName: DEPLOYABLE_INDEX_NAME,
+        KeyConditionExpression: 'deployable = :deployable',
         ExpressionAttributeValues: {
-          ':app': app
+          ':deployable': deployable
         }
       };
       result = await this.awsService.getAllQueryItems({ input });
       return (result || []) as T[];
     } catch (err) {
-      const errMsg = `queryRecordsByApp (table: ${table}):: could not get data for app: ${app}; error: ${err}`;
+      const errMsg = `queryRecordsByDeployable (table: ${table}):: could not get data for deployable: ${deployable}; error: ${err}`;
       throw setFailedAndCreateError(errMsg);
     }
   };

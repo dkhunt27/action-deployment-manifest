@@ -55954,12 +55954,12 @@ const setFailedAndCreateError = (message) => {
     return new Error(message);
 };
 const buildDeployableKey = (params) => {
-    const { app, version } = params;
-    return `${version}|${app}`;
+    const { deployable, version } = params;
+    return `${version}|${deployable}`;
 };
 const buildDeployedKey = (params) => {
-    const { app, env } = params;
-    return `${env}|${app}`;
+    const { deployable, env } = params;
+    return `${env}|${deployable}`;
 };
 
 // const MAX_BATCH_WRITE_ITEMS = 25;
@@ -56095,27 +56095,27 @@ class CommandService {
         this.config = configService.config();
     }
     /**
-     * handle new deployable (addNewDeployable, version, appList)
-     *   - assert app/version does not exist in deployable
-     *   - add app/version to deployable with status available
+     * handle new deployable (addNewDeployable, version, deployables)
+     *   - assert deployable/version does not exist in deployable
+     *   - add deployable/version to deployable with status available
      */
     addNewDeployable = async (params) => {
-        const { version, appList, actor } = params;
-        coreExports.info(`Adding new deployable version ${version} for apps: ${appList.join(', ')} by actor ${actor}`);
-        if (appList.length === 0) {
-            const errMsg = `addNewDeployable error: appList cannot be empty`;
+        const { version, deployables, actor } = params;
+        coreExports.info(`Adding new deployable version ${version} for deployables: ${deployables.join(', ')} by actor ${actor}`);
+        if (deployables.length === 0) {
+            const errMsg = `addNewDeployable error: deployables cannot be empty`;
             throw setFailedAndCreateError(errMsg);
         }
-        // assert app/version does not exist in deployable
-        await this.assertUtils.assertAppVersionDoesNotExist({
+        // assert deployable/version does not exist in deployable
+        await this.assertUtils.assertDeployableVersionDoesNotExist({
             table: this.config.deployableTable,
             version,
-            appList
+            deployables
         });
-        // add app/version to deployable with status available
-        for (const app of appList) {
+        // add deployable/version to deployable with status available
+        for (const deployable of deployables) {
             await this.commandUtils.putDeployableRecord({
-                app,
+                deployable,
                 version,
                 status: DeploymentStatus.AVAILABLE,
                 actor
@@ -56124,16 +56124,19 @@ class CommandService {
         coreExports.info(`Command completed`);
     };
     /**
-     * handle get deployable list. (getDeployableList, version, appList?)
-     *   - assert app/version only has one record in deployable
-     *   - if version=latest, return all records with status "prod" (restrict to appList if provided)
-     *   - if version!=latest, return records with status not rejected that match version (restrict to appList if provided)
+     * handle get deployable list. (getDeployableList, version, deployables?)
+     *   - assert deployable/version only has one record in deployable
+     *   - if version=latest, return all records with status "prod" (restrict to deployables if provided)
+     *   - if version!=latest, return records with status not rejected that match version (restrict to deployables if provided)
      */
     getDeployableList = async (params) => {
-        const { version, appList = [] } = params;
+        const { version, deployables = [] } = params;
         try {
             let logMsg = `Getting deployable list for version ${version}`;
-            logMsg += appList.length > 0 ? ` restricting to apps: ${appList.join(', ')}` : ' (all apps)';
+            logMsg +=
+                deployables.length > 0
+                    ? ` restricting to deployables: ${deployables.join(', ')}`
+                    : ' (all deployables)';
             coreExports.info(logMsg);
             let records = [];
             if (version === 'latest') {
@@ -56151,16 +56154,18 @@ class CommandService {
                 });
                 records = all.filter((item) => item.status !== 'rejected');
             }
-            if (appList.length > 0) {
-                // assert app/version only has one record in deployable
-                await this.assertUtils.assertAppVersionRecordsExistsExactlyOnce({
+            if (deployables.length > 0) {
+                // assert deployable/version only has one record in deployable
+                await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce({
                     table: this.config.deployableTable,
                     records,
                     version,
-                    appList
+                    deployables
                 });
             }
-            const filtered = appList.length > 0 ? records.filter((item) => appList.includes(item.app)) : records;
+            const filtered = deployables.length > 0
+                ? records.filter((item) => deployables.includes(item.deployable))
+                : records;
             coreExports.info(`Command completed`);
             return filtered;
         }
@@ -56170,90 +56175,93 @@ class CommandService {
         }
     };
     /**
-     * handle deployed (markDeployed, version, env, appList)
-     *   - assert app/version exists in deployable exactly once
+     * handle deployed (markDeployed, version, env, deployables)
+     *   - assert deployable/version exists in deployable exactly once
      *   - assert version/env exists in deployed no more than once
-     *   - if env/app exists in deployed, update version
-     *   - if env/app does not exist in deployed, add new record with version
+     *   - if env/deployable exists in deployed, update version
+     *   - if env/deployable does not exist in deployed, add new record with version
      *   - if deployedToProd is true, update deployable
-     *      - find app with status "rollback" and update to "decommissioned"
-     *      - find app with status "prod" and update to "rollback"
-     *      - find app/version set status to "prod"
+     *      - find deployable with status "rollback" and update to "decommissioned"
+     *      - find deployable with status "prod" and update to "rollback"
+     *      - find deployable/version set status to "prod"
      *   - if deployedToProd is not true, update deployable
-     *      - find app/version set status to "pending"
+     *      - find deployable/version set status to "pending"
      */
     markDeployed = async (params) => {
-        const { version, env, appList, actor, deployedToProd } = params;
+        const { version, env, deployables, actor, deployedToProd } = params;
         try {
             let logMsg = `Marking deployed to ${env} for version ${version} (deployedToProd: ${deployedToProd})`;
-            logMsg += appList.length > 0 ? ` restricting to apps: ${appList.join(', ')}` : ' (all apps)';
+            logMsg +=
+                deployables.length > 0
+                    ? ` restricting to deployables: ${deployables.join(', ')}`
+                    : ' (all deployables)';
             coreExports.info(logMsg);
-            // assert app/version exists in deployable exactly once
-            this.assertUtils.assertAppVersionExistsExactlyOnce({
+            // assert deployable/version exists in deployable exactly once
+            this.assertUtils.assertDeployableVersionExistsExactlyOnce({
                 table: this.config.deployableTable,
                 version,
-                appList
+                deployables
             });
-            // assert app/env exists in deployed no more than once
-            this.assertUtils.assertAppEnvExistsOnceAtMost({
+            // assert deployable/env exists in deployed no more than once
+            this.assertUtils.assertDeployableEnvExistsOnceAtMost({
                 env,
-                appList,
+                deployables,
                 table: this.config.deployedTable
             });
-            // if env/app exists in deployed, update version
-            // if env/app does not exist in deployed, add new record with version
+            // if env/deployable exists in deployed, update version
+            // if env/deployable does not exist in deployed, add new record with version
             // doesn't matter if updating or adding, put will do both
-            for (const app of appList) {
+            for (const deployable of deployables) {
                 await this.commandUtils.putDeployedRecord({
                     env,
-                    app,
+                    deployable,
                     version,
                     actor
                 });
             }
-            for (const app of appList) {
-                // need to get all deployable records with matching app and (version or have status rollback or prod)
+            for (const deployable of deployables) {
+                // need to get all deployable records with matching deployable and (version or have status rollback or prod)
                 const deployableRecords = await this.commandUtils.getRelevantDeployableRecordsForMarkDeployed({
                     deployableTable: this.config.deployableTable,
-                    app,
+                    deployable,
                     version
                 });
                 if (deployedToProd) {
-                    // update status to decommissioned where app has status rollback
-                    // update status to rollback where app has status prod
-                    // update status to prod where app/version matches
-                    // Find records with rollback status for this app and update to decommissioned
+                    // update status to decommissioned where deployable has status rollback
+                    // update status to rollback where deployable has status prod
+                    // update status to prod where deployable/version matches
+                    // Find records with rollback status for this deployable and update to decommissioned
                     await this.commandUtils.updateDeployableRollbackRecordToDecommissioned({
                         deployableTable: this.config.deployableTable,
                         records: deployableRecords,
-                        app,
+                        deployable,
                         actor
                     });
-                    // Find records with prod status for this app and update to rollback
+                    // Find records with prod status for this deployable and update to rollback
                     await this.commandUtils.updateDeployableProdRecordToRollback({
                         deployableTable: this.config.deployableTable,
                         records: deployableRecords,
-                        app,
+                        deployable,
                         actor
                     });
-                    // Find the record that matches app/version and update to prod
+                    // Find the record that matches deployable/version and update to prod
                     await this.commandUtils.updateDeployableVersionRecordToStatus({
                         deployableTable: this.config.deployableTable,
                         records: deployableRecords,
                         status: DeploymentStatus.PROD,
-                        app,
+                        deployable,
                         version,
                         actor
                     });
                 }
                 else {
                     // if deployedToProd is not true, update deployable
-                    // find app/version set status to "pending"
+                    // find deployable/version set status to "pending"
                     await this.commandUtils.updateDeployableVersionRecordToStatus({
                         deployableTable: this.config.deployableTable,
                         records: deployableRecords,
                         status: DeploymentStatus.PENDING,
-                        app,
+                        deployable,
                         version,
                         actor
                     });
@@ -56288,83 +56296,83 @@ class AssertUtilities {
     constructor(queryUtils) {
         this.queryUtils = queryUtils;
     }
-    assertAppVersionDoesNotExist = async (params) => {
-        const { version, appList, table } = params;
+    assertDeployableVersionDoesNotExist = async (params) => {
+        const { version, deployables, table } = params;
         const records = await this.queryUtils.queryRecordsByVersion({
             table,
             version
         });
-        // Check that each app in appList does not exists for this version
-        for (const app of appList) {
-            const matchingRecords = records.filter((record) => record.app === app);
+        // Check that each deployable in deployables does not exists for this version
+        for (const deployable of deployables) {
+            const matchingRecords = records.filter((record) => record.deployable === deployable);
             if (matchingRecords.length >= 1) {
-                const errMsg = `assertAppVersionDoesNotExist (table: ${table}):: record(s) (${matchingRecords.length}) found for version: ${version} and app: ${app}`;
+                const errMsg = `assertDeployableVersionDoesNotExist (table: ${table}):: record(s) (${matchingRecords.length}) found for version: ${version} and deployable: ${deployable}`;
                 throw setFailedAndCreateError(errMsg);
             }
         }
     };
-    assertAppVersionExistsExactlyOnce = async (params) => {
-        const { version, appList, table } = params;
+    assertDeployableVersionExistsExactlyOnce = async (params) => {
+        const { version, deployables, table } = params;
         const records = await this.queryUtils.queryRecordsByVersion({
             table,
             version
         });
-        this.assertAppVersionRecordsExistsExactlyOnce({
+        this.assertDeployableVersionRecordsExistsExactlyOnce({
             records,
             version,
-            appList,
+            deployables,
             table
         });
     };
-    assertAppVersionRecordsExistsExactlyOnce = async (params) => {
-        const { version, appList, table } = params;
+    assertDeployableVersionRecordsExistsExactlyOnce = async (params) => {
+        const { version, deployables, table } = params;
         const records = await this.queryUtils.queryRecordsByVersion({
             table,
             version
         });
         if (!records || records.length === 0) {
-            const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;
+            const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;
             throw setFailedAndCreateError(errMsg);
         }
-        // IN is not support in DynamoDb queries, so we have to check appList manually
-        // Check that each app in appList exists exactly once for this version
-        for (const app of appList) {
-            const matchingRecords = records.filter((record) => record.app === app);
+        // IN is not support in DynamoDb queries, so we have to check deployables manually
+        // Check that each deployable in deployables exists exactly once for this version
+        for (const deployable of deployables) {
+            const matchingRecords = records.filter((record) => record.deployable === deployable);
             if (matchingRecords.length === 0) {
-                const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: no record found for version: ${version} and app: ${app}`;
+                const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: no record found for version: ${version} and deployable: ${deployable}`;
                 throw setFailedAndCreateError(errMsg);
             }
             if (matchingRecords.length > 1) {
-                const errMsg = `assertAppVersionRecordsExistsExactlyOnce (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and app: ${app}`;
+                const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and deployable: ${deployable}`;
                 throw setFailedAndCreateError(errMsg);
             }
         }
     };
-    assertAppVersionExistsOnceAtMost = async (params) => {
-        const { table, version, appList } = params;
+    assertDeployableVersionExistsOnceAtMost = async (params) => {
+        const { table, version, deployables } = params;
         const records = await this.queryUtils.queryRecordsByVersion({
             table,
             version
         });
-        // IN is not support in DynamoDb queries, so we have to check appList manually
-        // Check that each app in appList exists at most once for this version
-        for (const app of appList) {
-            const matchingRecords = records.filter((record) => record.app === app);
+        // IN is not support in DynamoDb queries, so we have to check deployables manually
+        // Check that each deployable in deployables exists at most once for this version
+        for (const deployable of deployables) {
+            const matchingRecords = records.filter((record) => record.deployable === deployable);
             if (matchingRecords.length > 1) {
-                const errMsg = `assertAppVersionExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and app: ${app}`;
+                const errMsg = `assertDeployableVersionExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for version: ${version} and deployable: ${deployable}`;
                 throw setFailedAndCreateError(errMsg);
             }
         }
     };
-    assertAppEnvExistsOnceAtMost = async (params) => {
-        const { table, env, appList } = params;
+    assertDeployableEnvExistsOnceAtMost = async (params) => {
+        const { table, env, deployables } = params;
         const records = await this.queryUtils.queryRecordsByEnv({ table, env });
-        // IN is not support in DynamoDb queries, so we have to check appList manually
-        // Check that each app in appList exists at most once for this version
-        for (const app of appList) {
-            const matchingRecords = records.filter((record) => record.app === app);
+        // IN is not support in DynamoDb queries, so we have to check deployables manually
+        // Check that each deployable in deployables exists at most once for this version
+        for (const deployable of deployables) {
+            const matchingRecords = records.filter((record) => record.deployable === deployable);
             if (matchingRecords.length > 1) {
-                const errMsg = `assertAppEnvExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for env: ${env} and app: ${app}`;
+                const errMsg = `assertDeployableEnvExistsOnceAtMost (table: ${table}):: multiple records (${matchingRecords.length}) found for env: ${env} and deployable: ${deployable}`;
                 throw setFailedAndCreateError(errMsg);
             }
         }
@@ -56381,24 +56389,24 @@ class CommandUtilities {
         this.config = configService.config();
     }
     getRelevantDeployableRecordsForMarkDeployed = async (params) => {
-        const { app, version, deployableTable } = params;
-        // get all deployable records for this app
-        const appRecords = await this.queryUtils.queryRecordsByApp({
+        const { deployable, version, deployableTable } = params;
+        // get all deployable records for this deployable
+        const deployables = await this.queryUtils.queryRecordsByDeployable({
             table: deployableTable,
-            app
+            deployable
         });
         // keep records that match version or have status rollback or prod
-        const relevantRecords = appRecords.filter((record) => record.version === version ||
+        const relevantRecords = deployables.filter((record) => record.version === version ||
             record.status === DeploymentStatus.ROLLBACK ||
             record.status === DeploymentStatus.PROD);
         return relevantRecords;
     };
     updateDeployableRollbackRecordToDecommissioned = async (params) => {
-        const { records, app, deployableTable, actor } = params;
-        // Find records with rollback status for this app and update to decommissioned
+        const { records, deployable, deployableTable, actor } = params;
+        // Find records with rollback status for this deployable and update to decommissioned
         const rollbackRecords = records.filter((record) => record.status === DeploymentStatus.ROLLBACK);
         if (rollbackRecords.length > 1) {
-            const errMsg = `updateDeployableRollbackRecordToDecommissioned error: multiple rollback records found for app ${app} when only one expected`;
+            const errMsg = `updateDeployableRollbackRecordToDecommissioned error: multiple rollback records found for deployable ${deployable} when only one expected`;
             throw setFailedAndCreateError(errMsg);
         }
         for (const record of rollbackRecords) {
@@ -56421,11 +56429,11 @@ class CommandUtilities {
         }
     };
     updateDeployableProdRecordToRollback = async (params) => {
-        const { records, app, deployableTable, actor } = params;
-        // Find records with rollback status for this app and update to decommissioned
+        const { records, deployable, deployableTable, actor } = params;
+        // Find records with rollback status for this deployable and update to decommissioned
         const prodRecords = records.filter((record) => record.status === DeploymentStatus.PROD);
         if (prodRecords.length > 1) {
-            const errMsg = `updateDeployableProdRecordToRollback error: multiple prod records found for app ${app} when only one expected`;
+            const errMsg = `updateDeployableProdRecordToRollback error: multiple prod records found for deployable ${deployable} when only one expected`;
             throw setFailedAndCreateError(errMsg);
         }
         for (const record of prodRecords) {
@@ -56448,11 +56456,11 @@ class CommandUtilities {
         }
     };
     updateDeployableVersionRecordToStatus = async (params) => {
-        const { records, app, version, deployableTable, actor, status } = params;
-        // Find records with rollback status for this app and update to decommissioned
+        const { records, deployable, version, deployableTable, actor, status } = params;
+        // Find records with rollback status for this deployable and update to decommissioned
         const versionRecords = records.filter((record) => record.version === version);
         if (versionRecords.length > 1) {
-            const errMsg = `updateDeployableVersionRecordToStatus error: multiple version records found for app ${app} / version ${version} when only one expected`;
+            const errMsg = `updateDeployableVersionRecordToStatus error: multiple version records found for deployable ${deployable} / version ${version} when only one expected`;
             throw setFailedAndCreateError(errMsg);
         }
         for (const record of versionRecords) {
@@ -56475,11 +56483,11 @@ class CommandUtilities {
         }
     };
     putDeployableRecord = async (params) => {
-        const { app, version, status, actor } = params;
+        const { deployable, version, status, actor } = params;
         const item = {
-            id: buildDeployableKey({ app, version }),
+            id: buildDeployableKey({ deployable, version }),
             version,
-            app,
+            deployable,
             status: status,
             modifiedDate: new Date().toISOString(),
             modifiedBy: actor
@@ -56497,11 +56505,11 @@ class CommandUtilities {
         }
     };
     putDeployedRecord = async (params) => {
-        const { env, app, version, actor } = params;
+        const { env, deployable, version, actor } = params;
         const item = {
-            id: buildDeployedKey({ app, env }),
+            id: buildDeployedKey({ deployable, env }),
             env,
-            app,
+            deployable,
             version,
             deployedDate: new Date().toISOString(),
             deployedBy: actor
@@ -56523,7 +56531,7 @@ class CommandUtilities {
 const ENV_INDEX_NAME = 'env-index';
 const VERSION_INDEX_NAME = 'version-index';
 const STATUS_INDEX_NAME = 'status-index';
-const APP_INDEX_NAME = 'app-index';
+const DEPLOYABLE_INDEX_NAME = 'deployable-index';
 class QueryUtilities {
     awsService;
     constructor(awsService) {
@@ -56549,23 +56557,23 @@ class QueryUtilities {
             throw setFailedAndCreateError(errMsg);
         }
     };
-    queryRecordsByApp = async (params) => {
-        const { table, app } = params;
+    queryRecordsByDeployable = async (params) => {
+        const { table, deployable } = params;
         let result;
         try {
             const input = {
                 TableName: table,
-                IndexName: APP_INDEX_NAME,
-                KeyConditionExpression: 'app = :app',
+                IndexName: DEPLOYABLE_INDEX_NAME,
+                KeyConditionExpression: 'deployable = :deployable',
                 ExpressionAttributeValues: {
-                    ':app': app
+                    ':deployable': deployable
                 }
             };
             result = await this.awsService.getAllQueryItems({ input });
             return (result || []);
         }
         catch (err) {
-            const errMsg = `queryRecordsByApp (table: ${table}):: could not get data for app: ${app}; error: ${err}`;
+            const errMsg = `queryRecordsByDeployable (table: ${table}):: could not get data for deployable: ${deployable}; error: ${err}`;
             throw setFailedAndCreateError(errMsg);
         }
     };
@@ -56645,9 +56653,9 @@ const parseInputs = () => {
     const deployedToProd = coreExports.getInput('deployedToProd', {
         required: false
     }) === 'true';
-    const appList = coreExports.getInput('appList', { required: false })
+    const deployables = coreExports.getInput('deployables', { required: false })
         .split(',')
-        .filter((app) => app.length > 0);
+        .filter((d) => d.length > 0);
     const deployableTable = coreExports.getInput('deployableTable', { required: true });
     const deployedTable = coreExports.getInput('deployedTable', { required: true });
     const awsRegion = coreExports.getInput('awsRegion', { required: false }) ?? 'us-east-1';
@@ -56655,7 +56663,7 @@ const parseInputs = () => {
         command,
         version,
         actor,
-        appList,
+        deployables,
         env,
         deployedToProd,
         deployableTable,
@@ -56677,42 +56685,39 @@ const run = async () => {
                 {
                     const deployableList = await commandService.getDeployableList({
                         version: inputs.version,
-                        appList: inputs.appList
+                        deployables: inputs.deployables
                     });
-                    const deployableAppListString = deployableList.map((record) => record.app).join(',');
-                    const deployableAppList = deployableList.map((record) => record.app);
-                    const deployableListJson = JSON.stringify(deployableList);
+                    const deployablesFullJson = JSON.stringify(deployableList);
+                    const deployablesJson = JSON.stringify(deployableList.map((d) => ({ deployable: d.deployable, version: d.version })));
                     const hasDeployables = deployableList.length > 0;
-                    coreExports.setOutput('deployableAppList', deployableAppList);
-                    coreExports.setOutput('deployableAppListString', deployableAppListString);
-                    coreExports.setOutput('deployableList', deployableListJson);
                     coreExports.setOutput('hasDeployables', hasDeployables);
-                    coreExports.info(`deployableAppList: ${deployableAppList}`);
-                    coreExports.info(`deployableAppListString: ${deployableAppListString}`);
-                    coreExports.info(`deployableList: ${deployableListJson}`);
+                    coreExports.setOutput('deployablesJson', deployablesJson);
+                    coreExports.setOutput('deployablesFullJson', deployablesFullJson);
                     coreExports.info(`hasDeployables: ${hasDeployables}`);
+                    coreExports.info(`deployablesJson: ${deployablesJson}`);
+                    coreExports.info(`deployablesFullJson: ${deployablesFullJson}`);
                 }
                 break;
             case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:
-                if (!inputs.appList || inputs.appList.length === 0) {
-                    throw new Error(`appList input is required for command: ${inputs.command}`);
+                if (!inputs.deployables || inputs.deployables.length === 0) {
+                    throw new Error(`deployables input is required for command: ${inputs.command}`);
                 }
                 await commandService.addNewDeployable({
                     version: inputs.version,
-                    appList: inputs.appList,
+                    deployables: inputs.deployables,
                     actor: inputs.actor
                 });
                 break;
             case DeploymentManifestCommand.MARK_DEPLOYED:
-                if (!inputs.appList || inputs.appList.length === 0) {
-                    throw new Error(`appList input is required for command: ${inputs.command}`);
+                if (!inputs.deployables || inputs.deployables.length === 0) {
+                    throw new Error(`deployables input is required for command: ${inputs.command}`);
                 }
                 if (!inputs.env) {
                     throw new Error(`env input is required for command: ${inputs.command}`);
                 }
                 await commandService.markDeployed({
                     version: inputs.version,
-                    appList: inputs.appList,
+                    deployables: inputs.deployables,
                     actor: inputs.actor,
                     env: inputs.env,
                     deployedToProd: inputs.deployedToProd ?? false

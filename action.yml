@@ -1,7 +1,7 @@
 name: Deployment Manifest
 description:
-  git action that maintains a deployment manifest of the matrix of environments, apps, versions, and
-  statuses
+  git action that maintains a deployment manifest of the matrix of environments, deployables,
+  versions, and statuses
 author: dkhunt27
 
 branding:
@@ -24,10 +24,10 @@ inputs:
   actor:
     description: 'Actor performing the deployment action'
     required: true
-  appList:
+  deployables:
     description:
-      'App list to perform command against or restrict results to -- Comma-separated list of apps
-      (required for addNewDeployable,markDeployed commands)'
+      'List of deployables to perform the "command" against or restrict results to --
+      Comma-separated list of deployables (required for addNewDeployable,markDeployed commands)'
     required: false
     default: ''
   env:

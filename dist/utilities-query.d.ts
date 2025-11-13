@@ -6,9 +6,9 @@ export declare class QueryUtilities {
         table: string;
         version: string;
     }) => Promise<T[]>;
-    queryRecordsByApp: <T>(params: {
+    queryRecordsByDeployable: <T>(params: {
         table: string;
-        app: string;
+        deployable: string;
     }) => Promise<T[]>;
     queryRecordsByStatus: <T>(params: {
         table: string;

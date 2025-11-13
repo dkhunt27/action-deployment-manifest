@@ -5,7 +5,7 @@ exports[`CommandService addNewDeployable should successfully add new deployable 
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "status": "available",
       "version": "1.0.0",
     },
@@ -13,7 +13,7 @@ exports[`CommandService addNewDeployable should successfully add new deployable 
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "status": "available",
       "version": "1.0.0",
     },
@@ -21,16 +21,16 @@ exports[`CommandService addNewDeployable should successfully add new deployable 
 ]
 `;
 
-exports[`CommandService getDeployableList should filter by appList when provided 1`] = `
+exports[`CommandService getDeployableList should filter by deployables when provided 1`] = `
 [
   {
-    "app": "app4",
+    "deployable": "app4",
     "id": "1.0.2|app4",
     "status": "available",
     "version": "1.0.2",
   },
   {
-    "app": "app5",
+    "deployable": "app5",
     "id": "1.0.2|app5",
     "status": "available",
     "version": "1.0.2",
@@ -41,13 +41,13 @@ exports[`CommandService getDeployableList should filter by appList when provided
 exports[`CommandService getDeployableList should return all prod records when version is latest 1`] = `
 [
   {
-    "app": "app1",
+    "deployable": "app1",
     "id": "1.0.0|app1",
     "status": "prod",
     "version": "1.0.0",
   },
   {
-    "app": "app2",
+    "deployable": "app2",
     "id": "1.0.1|app2",
     "status": "prod",
     "version": "1.0.1",
@@ -55,10 +55,10 @@ exports[`CommandService getDeployableList should return all prod records when ve
 ]
 `;
 
-exports[`CommandService getDeployableList should return app prod records when version is latest and appList provided 1`] = `
+exports[`CommandService getDeployableList should return deployable prod records when version is latest and deployables provided 1`] = `
 [
   {
-    "app": "app1",
+    "deployable": "app1",
     "id": "1.0.0|app1",
     "status": "prod",
     "version": "1.0.0",
@@ -69,25 +69,25 @@ exports[`CommandService getDeployableList should return app prod records when ve
 exports[`CommandService getDeployableList should return non-rejected records for specific version 1`] = `
 [
   {
-    "app": "app1",
+    "deployable": "app1",
     "id": "1.0.2|app1",
     "status": "available",
     "version": "1.0.2",
   },
   {
-    "app": "app3",
+    "deployable": "app3",
     "id": "1.0.2|app3",
     "status": "pending",
     "version": "1.0.2",
   },
   {
-    "app": "app4",
+    "deployable": "app4",
     "id": "1.0.2|app4",
     "status": "available",
     "version": "1.0.2",
   },
   {
-    "app": "app5",
+    "deployable": "app5",
     "id": "1.0.2|app5",
     "status": "available",
     "version": "1.0.2",
@@ -100,7 +100,7 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "env": "staging",
       "version": "1.0.0",
     },
@@ -108,7 +108,7 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "env": "staging",
       "version": "1.0.0",
     },
@@ -121,11 +121,11 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -133,7 +133,7 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -148,11 +148,11 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -160,7 +160,7 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -180,7 +180,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "env": "prod",
       "version": "1.0.0",
     },
@@ -188,7 +188,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "env": "prod",
       "version": "1.0.0",
     },
@@ -201,11 +201,11 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -213,7 +213,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -228,11 +228,11 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -240,7 +240,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -260,11 +260,11 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -272,7 +272,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -285,11 +285,11 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -297,7 +297,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -315,11 +315,11 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app1",
+      "deployable": "app1",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -327,7 +327,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -340,11 +340,11 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
   [
     {
       "actor": "test-user",
-      "app": "app2",
+      "deployable": "app2",
       "deployableTable": "deployableTable",
       "records": [
         {
-          "app": "app1",
+          "deployable": "app1",
           "id": "1.0.0|app1",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",
@@ -352,7 +352,7 @@ exports[`CommandService markDeployed should successfully mark deployed to prod e
           "version": "1.0.0",
         },
         {
-          "app": "app2",
+          "deployable": "app2",
           "id": "1.0.0|app2",
           "modifiedBy": "test",
           "modifiedDate": "2024-01-01T11:22:27.000Z",

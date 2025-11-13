@@ -8,39 +8,39 @@ export declare class CommandUtilities {
     private readonly config;
     constructor(awsService: AwsService, queryUtils: QueryUtilities, configService: ConfigService);
     getRelevantDeployableRecordsForMarkDeployed: (params: {
-        app: string;
+        deployable: string;
         version: string;
         deployableTable: string;
     }) => Promise<DeployableRecordType[]>;
     updateDeployableRollbackRecordToDecommissioned: (params: {
         records: DeployableRecordType[];
-        app: string;
+        deployable: string;
         deployableTable: string;
         actor: string;
     }) => Promise<void>;
     updateDeployableProdRecordToRollback: (params: {
         records: DeployableRecordType[];
-        app: string;
+        deployable: string;
         deployableTable: string;
         actor: string;
     }) => Promise<void>;
     updateDeployableVersionRecordToStatus: (params: {
         deployableTable: string;
         records: DeployableRecordType[];
-        app: string;
+        deployable: string;
         version: string;
         actor: string;
         status: DeploymentStatus;
     }) => Promise<void>;
     putDeployableRecord: (params: {
-        app: string;
+        deployable: string;
         version: string;
         status: DeploymentStatus;
         actor: string;
     }) => Promise<void>;
     putDeployedRecord: (params: {
         env: string;
-        app: string;
+        deployable: string;
         version: string;
         actor: string;
     }) => Promise<void>;

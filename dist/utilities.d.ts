@@ -1,9 +1,9 @@
 export declare const setFailedAndCreateError: (message: string) => Error;
 export declare const buildDeployableKey: (params: {
-    app: string;
+    deployable: string;
     version: string;
 }) => string;
 export declare const buildDeployedKey: (params: {
-    app: string;
+    deployable: string;
     env: string;
 }) => string;

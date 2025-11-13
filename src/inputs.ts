@@ -19,10 +19,10 @@ export const parseInputs = (): DeploymentManifestInputs => {
     core.getInput('deployedToProd', {
       required: false
     }) === 'true';
-  const appList = core
-    .getInput('appList', { required: false })
+  const deployables = core
+    .getInput('deployables', { required: false })
     .split(',')
-    .filter((app) => app.length > 0);
+    .filter((d) => d.length > 0);
 
   const deployableTable = core.getInput('deployableTable', { required: true });
   const deployedTable = core.getInput('deployedTable', { required: true });
@@ -32,7 +32,7 @@ export const parseInputs = (): DeploymentManifestInputs => {
     command,
     version,
     actor,
-    appList,
+    deployables,
     env,
     deployedToProd,
     deployableTable,

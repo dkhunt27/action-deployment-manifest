@@ -5,12 +5,12 @@ export const setFailedAndCreateError = (message: string): Error => {
   return new Error(message);
 };
 
-export const buildDeployableKey = (params: { app: string; version: string }) => {
-  const { app, version } = params;
-  return `${version}|${app}`;
+export const buildDeployableKey = (params: { deployable: string; version: string }) => {
+  const { deployable, version } = params;
+  return `${version}|${deployable}`;
 };
 
-export const buildDeployedKey = (params: { app: string; env: string }) => {
-  const { app, env } = params;
-  return `${env}|${app}`;
+export const buildDeployedKey = (params: { deployable: string; env: string }) => {
+  const { deployable, env } = params;
+  return `${env}|${deployable}`;
 };

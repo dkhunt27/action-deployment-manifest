@@ -14,7 +14,7 @@ export declare enum DeploymentManifestCommand {
 export type DeployableRecordType = {
     id: string;
     version: string;
-    app: string;
+    deployable: string;
     status: DeploymentStatus;
     modifiedDate: string;
     modifiedBy: string;
@@ -22,7 +22,7 @@ export type DeployableRecordType = {
 export type DeployedRecordType = {
     id: string;
     env: string;
-    app: string;
+    deployable: string;
     version: string;
     deployedDate: string;
     deployedBy: string;
@@ -35,7 +35,7 @@ export type DeploymentManifestInputs = {
     command: DeploymentManifestCommand;
     version: string;
     actor: string;
-    appList?: string[];
+    deployables?: string[];
     env?: string;
     deployedToProd?: boolean;
     deployableTable: string;

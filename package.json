@@ -1,6 +1,6 @@
 {
   "name": "action-deployment-manifest",
-  "description": "git action that maintains a deployment manifest of the matrix of environments, apps, versions, and statuses",
+  "description": "git action that maintains a deployment manifest of the matrix of environments, deployables, versions, and statuses",
   "version": "0.0.0",
   "author": "dkhunt27",
   "type": "module",

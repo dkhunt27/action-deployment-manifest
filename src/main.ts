@@ -19,45 +19,44 @@ export const run = async (): Promise<void> => {
         {
           const deployableList = await commandService.getDeployableList({
             version: inputs.version,
-            appList: inputs.appList
+            deployables: inputs.deployables
           });
 
-          const deployableAppListString = deployableList.map((record) => record.app).join(',');
-          const deployableAppList = deployableList.map((record) => record.app);
-          const deployableListJson = JSON.stringify(deployableList);
+          const deployablesFullJson = JSON.stringify(deployableList);
+          const deployablesJson = JSON.stringify(
+            deployableList.map((d) => ({ deployable: d.deployable, version: d.version }))
+          );
           const hasDeployables = deployableList.length > 0;
 
-          core.setOutput('deployableAppList', deployableAppList);
-          core.setOutput('deployableAppListString', deployableAppListString);
-          core.setOutput('deployableList', deployableListJson);
           core.setOutput('hasDeployables', hasDeployables);
+          core.setOutput('deployablesJson', deployablesJson);
+          core.setOutput('deployablesFullJson', deployablesFullJson);
 
-          core.info(`deployableAppList: ${deployableAppList}`);
-          core.info(`deployableAppListString: ${deployableAppListString}`);
-          core.info(`deployableList: ${deployableListJson}`);
           core.info(`hasDeployables: ${hasDeployables}`);
+          core.info(`deployablesJson: ${deployablesJson}`);
+          core.info(`deployablesFullJson: ${deployablesFullJson}`);
         }
         break;
       case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:
-        if (!inputs.appList || inputs.appList.length === 0) {
-          throw new Error(`appList input is required for command: ${inputs.command}`);
+        if (!inputs.deployables || inputs.deployables.length === 0) {
+          throw new Error(`deployables input is required for command: ${inputs.command}`);
         }
         await commandService.addNewDeployable({
           version: inputs.version,
-          appList: inputs.appList,
+          deployables: inputs.deployables,
           actor: inputs.actor
         });
         break;
       case DeploymentManifestCommand.MARK_DEPLOYED:
-        if (!inputs.appList || inputs.appList.length === 0) {
-          throw new Error(`appList input is required for command: ${inputs.command}`);
+        if (!inputs.deployables || inputs.deployables.length === 0) {
+          throw new Error(`deployables input is required for command: ${inputs.command}`);
         }
         if (!inputs.env) {
           throw new Error(`env input is required for command: ${inputs.command}`);
         }
         await commandService.markDeployed({
           version: inputs.version,
-          appList: inputs.appList,
+          deployables: inputs.deployables,
           actor: inputs.actor,
           env: inputs.env,
           deployedToProd: inputs.deployedToProd ?? false
