@@ -33,7 +33,7 @@ export const run = async (): Promise<void> => {
           );
 
           const deployablesPrettyString = deployablesJson
-            .replace(/\[\s*\{/, '[\n{')
+            .replace(/\[\s*\{/, '[\n  {')
             .replace(/\}\s*\]/, '}\n]')
             .replace(/},\s*\{/g, '},\n  {');
 

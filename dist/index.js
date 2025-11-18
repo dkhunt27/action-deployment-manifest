@@ -56692,7 +56692,7 @@ const run = async () => {
                     const deployablesFullJson = JSON.stringify(sorted);
                     const deployablesJson = JSON.stringify(sorted.map((d) => ({ deployable: d.deployable, version: d.version })));
                     const deployablesPrettyString = deployablesJson
-                        .replace(/\[\s*\{/, '[\n{')
+                        .replace(/\[\s*\{/, '[\n  {')
                         .replace(/\}\s*\]/, '}\n]')
                         .replace(/},\s*\{/g, '},\n  {');
                     const hasDeployables = sorted.length > 0;
