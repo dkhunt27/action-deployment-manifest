@@ -56687,15 +56687,23 @@ const run = async () => {
                         version: inputs.version,
                         deployables: inputs.deployables
                     });
-                    const deployablesFullJson = JSON.stringify(deployableList);
-                    const deployablesJson = JSON.stringify(deployableList.map((d) => ({ deployable: d.deployable, version: d.version })));
-                    const hasDeployables = deployableList.length > 0;
+                    // sort by version asc, deployable asc
+                    const sorted = lodashExports.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
+                    const deployablesFullJson = JSON.stringify(sorted);
+                    const deployablesJson = JSON.stringify(sorted.map((d) => ({ deployable: d.deployable, version: d.version })));
+                    const deployablesPrettyString = deployablesFullJson
+                        .replace(/\[\s*\{/, '[\n{')
+                        .replace(/\}\s*\]/, '}\n]')
+                        .replace(/},\s*\{/g, '},\n{');
+                    const hasDeployables = sorted.length > 0;
                     coreExports.setOutput('hasDeployables', hasDeployables);
                     coreExports.setOutput('deployables', deployablesJson);
                     coreExports.setOutput('deployablesFull', deployablesFullJson);
+                    coreExports.setOutput('deployablesPrettyString', deployablesPrettyString);
                     coreExports.info(`hasDeployables: ${hasDeployables}`);
                     coreExports.info(`deployables: ${deployablesJson}`);
                     coreExports.info(`deployablesFull: ${deployablesFullJson}`);
+                    coreExports.info(`deployablesPrettyString: ${deployablesPrettyString}`);
                 }
                 break;
             case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:

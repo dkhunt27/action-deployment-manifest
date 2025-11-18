@@ -3,6 +3,7 @@ import { buildCommandService } from './factory.ts';
 import { parseInputs } from './inputs.ts';
 import { DeploymentManifestCommand } from './types.ts';
 import { setFailedAndCreateError } from './utilities.ts';
+import { orderBy as _orderBy } from 'lodash';
 
 export const run = async (): Promise<void> => {
   try {
@@ -22,19 +23,28 @@ export const run = async (): Promise<void> => {
             deployables: inputs.deployables
           });
 
-          const deployablesFullJson = JSON.stringify(deployableList);
+          // sort by version asc, deployable asc
+          const sorted = _orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
+
+          const deployablesFullJson = JSON.stringify(sorted);
           const deployablesJson = JSON.stringify(
-            deployableList.map((d) => ({ deployable: d.deployable, version: d.version }))
+            sorted.map((d) => ({ deployable: d.deployable, version: d.version }))
           );
-          const hasDeployables = deployableList.length > 0;
+          const deployablesPrettyString = deployablesFullJson
+            .replace(/\[\s*\{/, '[\n{')
+            .replace(/\}\s*\]/, '}\n]')
+            .replace(/},\s*\{/g, '},\n{');
+          const hasDeployables = sorted.length > 0;
 
           core.setOutput('hasDeployables', hasDeployables);
           core.setOutput('deployables', deployablesJson);
           core.setOutput('deployablesFull', deployablesFullJson);
+          core.setOutput('deployablesPrettyString', deployablesPrettyString);
 
           core.info(`hasDeployables: ${hasDeployables}`);
           core.info(`deployables: ${deployablesJson}`);
           core.info(`deployablesFull: ${deployablesFullJson}`);
+          core.info(`deployablesPrettyString: ${deployablesPrettyString}`);
         }
         break;
       case DeploymentManifestCommand.ADD_NEW_DEPLOYABLE:
