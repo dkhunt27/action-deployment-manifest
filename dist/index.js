@@ -56691,10 +56691,10 @@ const run = async () => {
                     const sorted = lodashExports.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
                     const deployablesFullJson = JSON.stringify(sorted);
                     const deployablesJson = JSON.stringify(sorted.map((d) => ({ deployable: d.deployable, version: d.version })));
-                    const deployablesPrettyString = deployablesFullJson
+                    const deployablesPrettyString = deployablesJson
                         .replace(/\[\s*\{/, '[\n{')
                         .replace(/\}\s*\]/, '}\n]')
-                        .replace(/},\s*\{/g, '},\n{');
+                        .replace(/},\s*\{/g, '},\n  {');
                     const hasDeployables = sorted.length > 0;
                     coreExports.setOutput('hasDeployables', hasDeployables);
                     coreExports.setOutput('deployables', deployablesJson);
