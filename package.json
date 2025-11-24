@@ -47,7 +47,7 @@
     "@actions/core": "^1.11.1",
     "@aws-sdk/client-dynamodb": "^3.925.0",
     "@aws-sdk/lib-dynamodb": "^3.925.0",
-    "@aws-sdk/util-dynamodb": "^3.925.0",
+    "@aws-sdk/util-dynamodb": "^3.936.0",
     "async": "^3.2.6",
     "lodash": "^4.17.21"
   },
