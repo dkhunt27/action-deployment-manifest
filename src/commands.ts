@@ -1,15 +1,15 @@
 import * as core from '@actions/core';
-import type { ConfigService } from './config-service.ts';
+import type { ConfigService } from './config-service';
 import {
   type ConfigurationType,
   type DeployableRecordType,
   type DeployedRecordType,
   DeploymentStatus
-} from './types.ts';
-import { setFailedAndCreateError } from './utilities.ts';
-import type { AssertUtilities } from './utilities-assert.ts';
-import type { CommandUtilities } from './utilities-commands.ts';
-import type { QueryUtilities } from './utilities-query.ts';
+} from './types';
+import { setFailedAndCreateError } from './utilities';
+import type { AssertUtilities } from './utilities-assert';
+import type { CommandUtilities } from './utilities-commands';
+import type { QueryUtilities } from './utilities-query';
 
 export class CommandService {
   private readonly config: ConfigurationType;
@@ -65,13 +65,13 @@ export class CommandService {
   /**
    * handle get deployable list. (getDeployableList, version, deployables?)
    *   - assert deployable/version only has one record in deployable
-   *   - if version=latest, return all records with status "prod" (restrict to deployables if provided)
-   *   - if version!=latest, return records with status not rejected that match version (restrict to deployables if provided)
+   *   - if version starts with #.#.# then it is a specific version, return records with status not rejected that match version
+   *   - otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
    */
   getDeployableList = async (params: {
     version: string;
     deployables?: string[];
-  }): Promise<DeployableRecordType[]> => {
+  }): Promise<{ version: string; deployable: string }[]> => {
     const { version, deployables = [] } = params;
     try {
       let logMsg = `Getting deployable list for version ${version}`;
@@ -81,33 +81,41 @@ export class CommandService {
           : ' (all deployables)';
       core.info(logMsg);
 
-      let records: DeployableRecordType[] = [];
-      if (version === 'latest') {
-        // if version=latest, return all records with status "prod"
-        records = await this.queryUtils.queryRecordsByStatus<DeployableRecordType>({
-          table: this.config.deployableTable,
-          status: 'prod'
-        });
-      } else {
-        // if version!=latest, return records with status not rejected that match version
-        const all = await this.queryUtils.queryRecordsByVersion<DeployableRecordType>({
-          table: this.config.deployableTable,
+      let records: { version: string; deployable: string }[] = [];
+      let table = '';
+
+      if (/^\d+\.\d+\.\d+/.test(version)) {
+        // version starts with #.#.# then it is a specific version, return records with status not rejected that match version
+        table = this.config.deployableTable;
+
+        const data = await this.queryUtils.queryRecordsByVersion<DeployableRecordType>({
+          table,
           version
         });
 
-        records = all.filter((item) => item.status !== 'rejected');
-      }
+        records = data
+          .filter((item) => item.status !== 'rejected')
+          .map((item) => ({ version: item.version, deployable: item.deployable }));
 
-      if (deployables.length > 0) {
-        // assert deployable/version only has one record in deployable
-        await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce<DeployableRecordType>(
-          {
-            table: this.config.deployableTable,
+        if (deployables.length > 0) {
+          // assert deployable/version only has one record in deployable
+          await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce({
+            table,
             records,
             version,
             deployables
-          }
-        );
+          });
+        }
+      } else {
+        // otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
+        table = this.config.deployedTable;
+
+        const data = await this.queryUtils.queryRecordsByEnv<DeployedRecordType>({
+          table,
+          env: version
+        });
+
+        records = data.map((item) => ({ version: item.version, deployable: item.deployable }));
       }
 
       const filtered =

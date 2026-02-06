@@ -1,5 +1,5 @@
-import { setFailedAndCreateError } from './utilities.ts';
-import type { QueryUtilities } from './utilities-query.ts';
+import { setFailedAndCreateError } from './utilities';
+import type { QueryUtilities } from './utilities-query';
 
 export class AssertUtilities {
   constructor(private readonly queryUtils: QueryUtilities) {}
@@ -27,7 +27,9 @@ export class AssertUtilities {
     }
   };
 
-  assertDeployableVersionExistsExactlyOnce = async <T extends { deployable: string }>(params: {
+  assertDeployableVersionExistsExactlyOnce = async <
+    T extends { deployable: string; version: string }
+  >(params: {
     version: string;
     deployables: string[];
     table: string;
@@ -47,20 +49,13 @@ export class AssertUtilities {
     });
   };
 
-  assertDeployableVersionRecordsExistsExactlyOnce = async <
-    T extends { deployable: string }
-  >(params: {
-    records: T[];
+  assertDeployableVersionRecordsExistsExactlyOnce = async (params: {
+    records: { deployable: string; version: string }[];
     version: string;
     deployables: string[];
     table: string;
   }): Promise<void> => {
-    const { version, deployables, table } = params;
-
-    const records = await this.queryUtils.queryRecordsByVersion<T>({
-      table,
-      version
-    });
+    const { records, version, deployables, table } = params;
 
     if (!records || records.length === 0) {
       const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;

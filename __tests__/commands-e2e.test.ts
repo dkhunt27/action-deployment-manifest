@@ -1,7 +1,7 @@
 /* eslint-disable jest/no-disabled-tests */
 import type { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
-import type { CommandService } from '../src/commands.ts';
-import { buildCommandService } from '../src/factory.ts';
+import type { CommandService } from '../src/commands';
+import { buildCommandService } from '../src/factory';
 
 // make sure to start localstack first `localstack start`
 // and create the tables

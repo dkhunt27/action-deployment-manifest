@@ -1,14 +1,14 @@
 import type { PutCommandInput } from '@aws-sdk/lib-dynamodb';
-import type { AwsService } from './aws.ts';
-import type { ConfigService } from './config-service.ts';
+import type { AwsService } from './aws';
+import type { ConfigService } from './config-service';
 import {
   type ConfigurationType,
   type DeployableRecordType,
   type DeployedRecordType,
   DeploymentStatus
-} from './types.ts';
-import { buildDeployableKey, buildDeployedKey, setFailedAndCreateError } from './utilities.ts';
-import type { QueryUtilities } from './utilities-query.ts';
+} from './types';
+import { buildDeployableKey, buildDeployedKey, setFailedAndCreateError } from './utilities';
+import type { QueryUtilities } from './utilities-query';
 
 export class CommandUtilities {
   private readonly config: ConfigurationType;

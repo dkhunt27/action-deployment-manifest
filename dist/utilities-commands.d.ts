@@ -1,7 +1,7 @@
-import type { AwsService } from './aws.ts';
-import type { ConfigService } from './config-service.ts';
-import { type DeployableRecordType, DeploymentStatus } from './types.ts';
-import type { QueryUtilities } from './utilities-query.ts';
+import type { AwsService } from './aws';
+import type { ConfigService } from './config-service';
+import { type DeployableRecordType, DeploymentStatus } from './types';
+import type { QueryUtilities } from './utilities-query';
 export declare class CommandUtilities {
     private readonly awsService;
     private readonly queryUtils;

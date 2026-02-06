@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { DeploymentManifestCommand, type DeploymentManifestInputs } from './types.ts';
+import { DeploymentManifestCommand, type DeploymentManifestInputs } from './types';
 
 const isValidCommand = (command: string): command is DeploymentManifestCommand => {
   return Object.values(DeploymentManifestCommand).includes(command as DeploymentManifestCommand);

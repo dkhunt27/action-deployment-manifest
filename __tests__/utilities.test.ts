@@ -7,7 +7,7 @@ jest.unstable_mockModule('@actions/core', () => ({
 }));
 
 // Import after mocking
-const { setFailedAndCreateError } = await import('../src/utilities.ts');
+const { setFailedAndCreateError } = await import('../src/utilities');
 
 describe('utilities', () => {
   beforeEach(() => {

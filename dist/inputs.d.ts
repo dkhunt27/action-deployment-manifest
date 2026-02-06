@@ -1,2 +1,2 @@
-import { type DeploymentManifestInputs } from './types.ts';
+import { type DeploymentManifestInputs } from './types';
 export declare const parseInputs: () => DeploymentManifestInputs;

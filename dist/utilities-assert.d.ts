@@ -1,4 +1,4 @@
-import type { QueryUtilities } from './utilities-query.ts';
+import type { QueryUtilities } from './utilities-query';
 export declare class AssertUtilities {
     private readonly queryUtils;
     constructor(queryUtils: QueryUtilities);
@@ -11,15 +11,17 @@ export declare class AssertUtilities {
     }) => Promise<void>;
     assertDeployableVersionExistsExactlyOnce: <T extends {
         deployable: string;
+        version: string;
     }>(params: {
         version: string;
         deployables: string[];
         table: string;
     }) => Promise<void>;
-    assertDeployableVersionRecordsExistsExactlyOnce: <T extends {
-        deployable: string;
-    }>(params: {
-        records: T[];
+    assertDeployableVersionRecordsExistsExactlyOnce: (params: {
+        records: {
+            deployable: string;
+            version: string;
+        }[];
         version: string;
         deployables: string[];
         table: string;

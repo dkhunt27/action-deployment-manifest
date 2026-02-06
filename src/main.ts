@@ -1,8 +1,8 @@
 import * as core from '@actions/core';
-import { buildCommandService } from './factory.ts';
-import { parseInputs } from './inputs.ts';
-import { DeploymentManifestCommand } from './types.ts';
-import { setFailedAndCreateError } from './utilities.ts';
+import { buildCommandService } from './factory';
+import { parseInputs } from './inputs';
+import { DeploymentManifestCommand } from './types';
+import { setFailedAndCreateError } from './utilities';
 import { orderBy as _orderBy } from 'lodash';
 
 export const run = async (): Promise<void> => {

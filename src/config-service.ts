@@ -1,4 +1,4 @@
-import type { ConfigurationType } from './types.ts';
+import type { ConfigurationType } from './types';
 
 export class ConfigService {
   constructor(

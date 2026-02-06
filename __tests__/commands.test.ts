@@ -1,11 +1,11 @@
 import { jest } from '@jest/globals';
 import { mock } from 'jest-mock-extended';
-import { ConfigService } from '../src/config-service.ts';
-import { DeploymentStatus } from '../src/types.ts';
-import type { setFailedAndCreateError } from '../src/utilities.ts';
-import type { AssertUtilities } from '../src/utilities-assert.ts';
-import type { CommandUtilities } from '../src/utilities-commands.ts';
-import type { QueryUtilities } from '../src/utilities-query.ts';
+import { ConfigService } from '../src/config-service';
+import { DeployableRecordType, DeployedRecordType, DeploymentStatus } from '../src/types';
+import type { setFailedAndCreateError } from '../src/utilities';
+import type { AssertUtilities } from '../src/utilities-assert';
+import type { CommandUtilities } from '../src/utilities-commands';
+import type { QueryUtilities } from '../src/utilities-query';
 
 // Mock @actions/core
 const mockInfo = jest.fn();
@@ -17,15 +17,16 @@ jest.unstable_mockModule('@actions/core', () => ({
 
 // Mock utilities
 const mockSetFailedAndCreateError: jest.Mocked<typeof setFailedAndCreateError> = jest.fn();
-jest.unstable_mockModule('../src/utilities.ts', () => ({
+jest.unstable_mockModule('../src/utilities', () => ({
   setFailedAndCreateError: mockSetFailedAndCreateError
 }));
 
 // Import after mocking
-const { CommandService } = await import('../src/commands.ts');
+const { CommandService } = await import('../src/commands');
 
 describe('CommandService', () => {
-  let commandService: CommandService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let commandService: any;
   let mockAssertUtils: jest.Mocked<AssertUtilities>;
   let mockCommandUtils: jest.Mocked<CommandUtilities>;
   let mockQueryUtils: jest.Mocked<QueryUtilities>;
@@ -121,38 +122,113 @@ describe('CommandService', () => {
       deployables?: string[];
     };
     beforeEach(() => {
-      const prodRecords = [
-        { id: '1.0.0|app1', version: '1.0.0', deployable: 'app1', status: 'prod' },
-        { id: '1.0.1|app2', version: '1.0.1', deployable: 'app2', status: 'prod' }
-      ];
-      const nonProdRecords = [
-        { id: '1.0.2|app1', version: '1.0.2', deployable: 'app1', status: 'available' },
-        { id: '1.0.2|app2', version: '1.0.2', deployable: 'app2', status: 'rejected' },
-        { id: '1.0.2|app3', version: '1.0.2', deployable: 'app3', status: 'pending' },
-        { id: '1.0.2|app4', version: '1.0.2', deployable: 'app4', status: 'available' },
-        { id: '1.0.2|app5', version: '1.0.2', deployable: 'app5', status: 'available' }
-      ];
-      mockQueryUtils.queryRecordsByStatus.mockResolvedValue(prodRecords);
-      mockQueryUtils.queryRecordsByVersion.mockResolvedValue(nonProdRecords);
+      const deployedRecords: DeployedRecordType[] = [
+        { id: 'env1|app1', version: '1.0.0', deployable: 'app1', env: 'env1' },
+        { id: 'env1|app2', version: '1.0.1', deployable: 'app2', env: 'env1' }
+      ] as DeployedRecordType[];
+
+      const deployableRecords: DeployableRecordType[] = [
+        {
+          id: '1.0.2|app1',
+          version: '1.0.2',
+          deployable: 'app1',
+          status: DeploymentStatus.AVAILABLE
+        },
+        {
+          id: '1.0.2|app2',
+          version: '1.0.2',
+          deployable: 'app2',
+          status: DeploymentStatus.REJECTED
+        },
+        {
+          id: '1.0.2|app3',
+          version: '1.0.2',
+          deployable: 'app3',
+          status: DeploymentStatus.PENDING
+        },
+        {
+          id: '1.0.2|app4',
+          version: '1.0.2',
+          deployable: 'app4',
+          status: DeploymentStatus.AVAILABLE
+        },
+        {
+          id: '1.0.2|app5',
+          version: '1.0.2',
+          deployable: 'app5',
+          status: DeploymentStatus.AVAILABLE
+        }
+      ] as DeployableRecordType[];
+
+      mockQueryUtils.queryRecordsByEnv.mockResolvedValue(deployedRecords);
+      mockQueryUtils.queryRecordsByVersion.mockResolvedValue(deployableRecords);
     });
-    test('should return all prod records when version is latest', async () => {
-      params = { version: 'latest' };
-      await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
+    test('should return all env1 records when version is env1', async () => {
+      params = { version: 'env1' };
+      await expect(commandService.getDeployableList(params)).resolves.toMatchInlineSnapshot(`
+        [
+          {
+            "deployable": "app1",
+            "version": "1.0.0",
+          },
+          {
+            "deployable": "app2",
+            "version": "1.0.1",
+          },
+        ]
+      `);
     });
 
     test('should return deployable prod records when version is latest and deployables provided', async () => {
-      params = { version: 'latest', deployables: ['app1'] };
-      await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
+      params = { version: 'env1', deployables: ['app1'] };
+      await expect(commandService.getDeployableList(params)).resolves.toMatchInlineSnapshot(`
+        [
+          {
+            "deployable": "app1",
+            "version": "1.0.0",
+          },
+        ]
+      `);
     });
 
     test('should return non-rejected records for specific version', async () => {
       params = { version: '1.0.2' };
-      await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
+      await expect(commandService.getDeployableList(params)).resolves.toMatchInlineSnapshot(`
+        [
+          {
+            "deployable": "app1",
+            "version": "1.0.2",
+          },
+          {
+            "deployable": "app3",
+            "version": "1.0.2",
+          },
+          {
+            "deployable": "app4",
+            "version": "1.0.2",
+          },
+          {
+            "deployable": "app5",
+            "version": "1.0.2",
+          },
+        ]
+      `);
     });
 
     test('should filter by deployables when provided', async () => {
       params = { version: '1.0.2', deployables: ['app4', 'app5'] };
-      await expect(commandService.getDeployableList(params)).resolves.toMatchSnapshot();
+      await expect(commandService.getDeployableList(params)).resolves.toMatchInlineSnapshot(`
+        [
+          {
+            "deployable": "app4",
+            "version": "1.0.2",
+          },
+          {
+            "deployable": "app5",
+            "version": "1.0.2",
+          },
+        ]
+      `);
     });
   });
 

@@ -1,8 +1,7 @@
-import type { ConfigService } from './config-service.ts';
-import { type DeployableRecordType } from './types.ts';
-import type { AssertUtilities } from './utilities-assert.ts';
-import type { CommandUtilities } from './utilities-commands.ts';
-import type { QueryUtilities } from './utilities-query.ts';
+import type { ConfigService } from './config-service';
+import type { AssertUtilities } from './utilities-assert';
+import type { CommandUtilities } from './utilities-commands';
+import type { QueryUtilities } from './utilities-query';
 export declare class CommandService {
     private readonly assertUtils;
     private readonly commandUtils;
@@ -22,13 +21,16 @@ export declare class CommandService {
     /**
      * handle get deployable list. (getDeployableList, version, deployables?)
      *   - assert deployable/version only has one record in deployable
-     *   - if version=latest, return all records with status "prod" (restrict to deployables if provided)
-     *   - if version!=latest, return records with status not rejected that match version (restrict to deployables if provided)
+     *   - if version starts with #.#.# then it is a specific version, return records with status not rejected that match version
+     *   - otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
      */
     getDeployableList: (params: {
         version: string;
         deployables?: string[];
-    }) => Promise<DeployableRecordType[]>;
+    }) => Promise<{
+        version: string;
+        deployable: string;
+    }[]>;
     /**
      * handle deployed (markDeployed, version, env, deployables)
      *   - assert deployable/version exists in deployable exactly once

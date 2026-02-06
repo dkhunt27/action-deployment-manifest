@@ -1,4 +1,4 @@
-import type { ConfigurationType } from './types.ts';
+import type { ConfigurationType } from './types';
 export declare class ConfigService {
     private readonly deployableTable;
     private readonly deployedTable;

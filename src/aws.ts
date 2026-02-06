@@ -14,7 +14,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type { marshallOptions, unmarshallOptions } from '@aws-sdk/util-dynamodb';
 import _ from 'lodash';
-import { setFailedAndCreateError } from './utilities.ts';
+import { setFailedAndCreateError } from './utilities';
 
 // const MAX_BATCH_WRITE_ITEMS = 25;
 // const MAX_RETRY_COUNT = 5;

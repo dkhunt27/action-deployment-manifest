@@ -56126,8 +56126,8 @@ class CommandService {
     /**
      * handle get deployable list. (getDeployableList, version, deployables?)
      *   - assert deployable/version only has one record in deployable
-     *   - if version=latest, return all records with status "prod" (restrict to deployables if provided)
-     *   - if version!=latest, return records with status not rejected that match version (restrict to deployables if provided)
+     *   - if version starts with #.#.# then it is a specific version, return records with status not rejected that match version
+     *   - otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
      */
     getDeployableList = async (params) => {
         const { version, deployables = [] } = params;
@@ -56139,29 +56139,35 @@ class CommandService {
                     : ' (all deployables)';
             coreExports.info(logMsg);
             let records = [];
-            if (version === 'latest') {
-                // if version=latest, return all records with status "prod"
-                records = await this.queryUtils.queryRecordsByStatus({
-                    table: this.config.deployableTable,
-                    status: 'prod'
-                });
-            }
-            else {
-                // if version!=latest, return records with status not rejected that match version
-                const all = await this.queryUtils.queryRecordsByVersion({
-                    table: this.config.deployableTable,
+            let table = '';
+            if (/^\d+\.\d+\.\d+/.test(version)) {
+                // version starts with #.#.# then it is a specific version, return records with status not rejected that match version
+                table = this.config.deployableTable;
+                const data = await this.queryUtils.queryRecordsByVersion({
+                    table,
                     version
                 });
-                records = all.filter((item) => item.status !== 'rejected');
+                records = data
+                    .filter((item) => item.status !== 'rejected')
+                    .map((item) => ({ version: item.version, deployable: item.deployable }));
+                if (deployables.length > 0) {
+                    // assert deployable/version only has one record in deployable
+                    await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce({
+                        table,
+                        records,
+                        version,
+                        deployables
+                    });
+                }
             }
-            if (deployables.length > 0) {
-                // assert deployable/version only has one record in deployable
-                await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce({
-                    table: this.config.deployableTable,
-                    records,
-                    version,
-                    deployables
+            else {
+                // otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
+                table = this.config.deployedTable;
+                const data = await this.queryUtils.queryRecordsByEnv({
+                    table,
+                    env: version
                 });
+                records = data.map((item) => ({ version: item.version, deployable: item.deployable }));
             }
             const filtered = deployables.length > 0
                 ? records.filter((item) => deployables.includes(item.deployable))
@@ -56325,11 +56331,7 @@ class AssertUtilities {
         });
     };
     assertDeployableVersionRecordsExistsExactlyOnce = async (params) => {
-        const { version, deployables, table } = params;
-        const records = await this.queryUtils.queryRecordsByVersion({
-            table,
-            version
-        });
+        const { records, version, deployables, table } = params;
         if (!records || records.length === 0) {
             const errMsg = `assertDeployableVersionRecordsExistsExactlyOnce (table: ${table}):: no record(s) found for version: ${version}`;
             throw setFailedAndCreateError(errMsg);

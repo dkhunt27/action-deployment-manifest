@@ -1,4 +1,4 @@
-import type { AwsService } from './aws.ts';
+import type { AwsService } from './aws';
 export declare class QueryUtilities {
     private readonly awsService;
     constructor(awsService: AwsService);

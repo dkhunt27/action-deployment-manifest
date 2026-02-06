@@ -1,5 +1,5 @@
 import type { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
-import { CommandService } from './commands.ts';
+import { CommandService } from './commands';
 export declare const buildCommandService: (params: {
     deployableTable: string;
     deployedTable: string;

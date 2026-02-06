@@ -19,7 +19,6 @@ const config = {
     typescript({
       tsconfig: './tsconfig.json',
       compilerOptions: {
-        allowImportingTsExtensions: false,
         noEmit: false,
         emitDeclarationOnly: false
       }

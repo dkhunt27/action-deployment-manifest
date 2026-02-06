@@ -1,11 +1,11 @@
 import type { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
-import { AwsService } from './aws.ts';
-import { CommandService } from './commands.ts';
-import { ConfigService } from './config-service.ts';
-import { setFailedAndCreateError } from './utilities.ts';
-import { AssertUtilities } from './utilities-assert.ts';
-import { CommandUtilities } from './utilities-commands.ts';
-import { QueryUtilities } from './utilities-query.ts';
+import { AwsService } from './aws';
+import { CommandService } from './commands';
+import { ConfigService } from './config-service';
+import { setFailedAndCreateError } from './utilities';
+import { AssertUtilities } from './utilities-assert';
+import { CommandUtilities } from './utilities-commands';
+import { QueryUtilities } from './utilities-query';
 
 export const buildCommandService = async (params: {
   deployableTable: string;
