@@ -1,4 +1,4 @@
-import type { ConfigService } from './config-service';
+import { type ConfigurationType } from './types';
 import type { AssertUtilities } from './utilities-assert';
 import type { CommandUtilities } from './utilities-commands';
 import type { QueryUtilities } from './utilities-query';
@@ -7,7 +7,7 @@ export declare class CommandService {
     private readonly commandUtils;
     private readonly queryUtils;
     private readonly config;
-    constructor(assertUtils: AssertUtilities, commandUtils: CommandUtilities, queryUtils: QueryUtilities, configService: ConfigService);
+    constructor(assertUtils: AssertUtilities, commandUtils: CommandUtilities, queryUtils: QueryUtilities, config: ConfigurationType);
     /**
      * handle new deployable (addNewDeployable, version, deployables)
      *   - assert deployable/version does not exist in deployable

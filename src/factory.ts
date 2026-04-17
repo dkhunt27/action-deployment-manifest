@@ -1,28 +1,34 @@
 import type { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import { AwsService } from './aws';
 import { CommandService } from './commands';
-import { ConfigService } from './config-service';
 import { setFailedAndCreateError } from './utilities';
 import { AssertUtilities } from './utilities-assert';
 import { CommandUtilities } from './utilities-commands';
 import { QueryUtilities } from './utilities-query';
+import { ConfigurationType, IfAddNewDeployableExists } from './types';
 
 export const buildCommandService = async (params: {
   deployableTable: string;
   deployedTable: string;
+  ifAddNewDeployableExists: IfAddNewDeployableExists;
   awsRegion?: string;
-  config?: DynamoDBClientConfig;
+  ddbConfig?: DynamoDBClientConfig;
 }): Promise<CommandService> => {
-  const { deployableTable, deployedTable, config = { region: params.awsRegion } } = params;
+  const {
+    deployableTable,
+    deployedTable,
+    ifAddNewDeployableExists,
+    ddbConfig = { region: params.awsRegion }
+  } = params;
 
   try {
-    const configService = new ConfigService(deployableTable, deployedTable);
-    const awsService = new AwsService(config);
+    const config: ConfigurationType = { deployableTable, deployedTable, ifAddNewDeployableExists };
+    const awsService = new AwsService(ddbConfig);
     const queryUtils = new QueryUtilities(awsService);
-    const commandUtils = new CommandUtilities(awsService, queryUtils, configService);
+    const commandUtils = new CommandUtilities(awsService, queryUtils, config);
     const assertUtils = new AssertUtilities(queryUtils);
 
-    const commandService = new CommandService(assertUtils, commandUtils, queryUtils, configService);
+    const commandService = new CommandService(assertUtils, commandUtils, queryUtils, config);
 
     return commandService;
   } catch (error) {

@@ -1,12 +1,11 @@
 import type { AwsService } from './aws';
-import type { ConfigService } from './config-service';
-import { type DeployableRecordType, DeploymentStatus } from './types';
+import { type ConfigurationType, type DeployableRecordType, DeploymentStatus } from './types';
 import type { QueryUtilities } from './utilities-query';
 export declare class CommandUtilities {
     private readonly awsService;
     private readonly queryUtils;
     private readonly config;
-    constructor(awsService: AwsService, queryUtils: QueryUtilities, configService: ConfigService);
+    constructor(awsService: AwsService, queryUtils: QueryUtilities, config: ConfigurationType);
     getRelevantDeployableRecordsForMarkDeployed: (params: {
         deployable: string;
         version: string;
@@ -44,4 +43,11 @@ export declare class CommandUtilities {
         version: string;
         actor: string;
     }) => Promise<void>;
+    checkIfDeployableVersionExists: <T extends {
+        deployable: string;
+    }>(params: {
+        version: string;
+        deployable: string;
+        table: string;
+    }) => Promise<boolean>;
 }

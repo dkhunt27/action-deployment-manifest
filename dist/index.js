@@ -56082,17 +56082,23 @@ var DeploymentManifestCommand;
     DeploymentManifestCommand["GET_DEPLOYABLE_LIST"] = "getDeployableList";
     DeploymentManifestCommand["MARK_DEPLOYED"] = "markDeployed";
 })(DeploymentManifestCommand || (DeploymentManifestCommand = {}));
+var IfAddNewDeployableExists;
+(function (IfAddNewDeployableExists) {
+    IfAddNewDeployableExists["ERROR"] = "error";
+    IfAddNewDeployableExists["IGNORE"] = "ignore";
+    IfAddNewDeployableExists["OVERWRITE"] = "overwrite";
+})(IfAddNewDeployableExists || (IfAddNewDeployableExists = {}));
 
 class CommandService {
     assertUtils;
     commandUtils;
     queryUtils;
     config;
-    constructor(assertUtils, commandUtils, queryUtils, configService) {
+    constructor(assertUtils, commandUtils, queryUtils, config) {
         this.assertUtils = assertUtils;
         this.commandUtils = commandUtils;
         this.queryUtils = queryUtils;
-        this.config = configService.config();
+        this.config = config;
     }
     /**
      * handle new deployable (addNewDeployable, version, deployables)
@@ -56106,20 +56112,51 @@ class CommandService {
             const errMsg = `addNewDeployable error: deployables cannot be empty`;
             throw setFailedAndCreateError(errMsg);
         }
-        // assert deployable/version does not exist in deployable
-        await this.assertUtils.assertDeployableVersionDoesNotExist({
-            table: this.config.deployableTable,
-            version,
-            deployables
-        });
         // add deployable/version to deployable with status available
         for (const deployable of deployables) {
-            await this.commandUtils.putDeployableRecord({
-                deployable,
+            // check if already exists before adding
+            // TODO: this is query the ddb for each deployable, we can optimize this by doing one query for all deployables and checking in memory since we expect the number of deployables to be small
+            const exists = await this.commandUtils.checkIfDeployableVersionExists({
+                table: this.config.deployableTable,
                 version,
-                status: DeploymentStatus.AVAILABLE,
-                actor
+                deployable
             });
+            // if already exists, handle based on ifAddNewDeployableExists config
+            if (exists) {
+                switch (this.config.ifAddNewDeployableExists) {
+                    case IfAddNewDeployableExists.ERROR: {
+                        const errMsg = `addNewDeployable error: deployable ${deployable} with version ${version} already exists in table ${this.config.deployableTable}`;
+                        throw setFailedAndCreateError(errMsg);
+                    }
+                    case IfAddNewDeployableExists.IGNORE: {
+                        coreExports.warning(`addNewDeployable warning: deployable ${deployable} with version ${version} already exists in table ${this.config.deployableTable}, skipping add`);
+                        continue;
+                    }
+                    case IfAddNewDeployableExists.OVERWRITE: {
+                        coreExports.warning(`addNewDeployable warning: deployable ${deployable} with version ${version} already exists in table ${this.config.deployableTable}, overwriting record`);
+                        await this.commandUtils.putDeployableRecord({
+                            deployable,
+                            version,
+                            status: DeploymentStatus.AVAILABLE,
+                            actor
+                        });
+                        break;
+                    }
+                    default: {
+                        const errMsg = `addNewDeployable error: invalid config for ifAddNewDeployableExists: ${this.config.ifAddNewDeployableExists}`;
+                        throw setFailedAndCreateError(errMsg);
+                    }
+                }
+            }
+            else {
+                coreExports.info(`addNewDeployable info: deployable ${deployable} with version ${version} does not exist in table ${this.config.deployableTable}, adding new record`);
+                await this.commandUtils.putDeployableRecord({
+                    deployable,
+                    version,
+                    status: DeploymentStatus.AVAILABLE,
+                    actor
+                });
+            }
         }
         coreExports.info(`Command completed`);
     };
@@ -56282,21 +56319,6 @@ class CommandService {
     };
 }
 
-class ConfigService {
-    deployableTable;
-    deployedTable;
-    constructor(deployableTable, deployedTable) {
-        this.deployableTable = deployableTable;
-        this.deployedTable = deployedTable;
-    }
-    config = () => {
-        return {
-            deployableTable: this.deployableTable,
-            deployedTable: this.deployedTable
-        };
-    };
-}
-
 class AssertUtilities {
     queryUtils;
     constructor(queryUtils) {
@@ -56385,10 +56407,10 @@ class CommandUtilities {
     awsService;
     queryUtils;
     config;
-    constructor(awsService, queryUtils, configService) {
+    constructor(awsService, queryUtils, config) {
         this.awsService = awsService;
         this.queryUtils = queryUtils;
-        this.config = configService.config();
+        this.config = config;
     }
     getRelevantDeployableRecordsForMarkDeployed = async (params) => {
         const { deployable, version, deployableTable } = params;
@@ -56528,6 +56550,16 @@ class CommandUtilities {
             throw setFailedAndCreateError(errMsg);
         }
     };
+    checkIfDeployableVersionExists = async (params) => {
+        const { version, deployable, table } = params;
+        const records = await this.queryUtils.queryRecordsByVersion({
+            table,
+            version
+        });
+        // Check if deployable exists
+        const matchingRecords = records.filter((record) => record.deployable === deployable);
+        return matchingRecords.length === 0;
+    };
 }
 
 const ENV_INDEX_NAME = 'env-index';
@@ -56625,14 +56657,14 @@ class QueryUtilities {
 }
 
 const buildCommandService = async (params) => {
-    const { deployableTable, deployedTable, config = { region: params.awsRegion } } = params;
+    const { deployableTable, deployedTable, ifAddNewDeployableExists, ddbConfig = { region: params.awsRegion } } = params;
     try {
-        const configService = new ConfigService(deployableTable, deployedTable);
-        const awsService = new AwsService(config);
+        const config = { deployableTable, deployedTable, ifAddNewDeployableExists };
+        const awsService = new AwsService(ddbConfig);
         const queryUtils = new QueryUtilities(awsService);
-        const commandUtils = new CommandUtilities(awsService, queryUtils, configService);
+        const commandUtils = new CommandUtilities(awsService, queryUtils, config);
         const assertUtils = new AssertUtilities(queryUtils);
-        const commandService = new CommandService(assertUtils, commandUtils, queryUtils, configService);
+        const commandService = new CommandService(assertUtils, commandUtils, queryUtils, config);
         return commandService;
     }
     catch (error) {
@@ -56644,10 +56676,17 @@ const buildCommandService = async (params) => {
 const isValidCommand = (command) => {
     return Object.values(DeploymentManifestCommand).includes(command);
 };
+const isValidIfAddNewDeployableExists = (value) => {
+    return Object.values(IfAddNewDeployableExists).includes(value);
+};
 const parseInputs = () => {
     const command = coreExports.getInput('command', { required: true });
     if (!isValidCommand(command)) {
         throw new Error(`Invalid command input: ${command}; expected one of ${Object.values(DeploymentManifestCommand).join(', ')}`);
+    }
+    const ifAddNewDeployableExists = coreExports.getInput('ifAddNewDeployableExists', { required: false }) ?? 'error';
+    if (!isValidIfAddNewDeployableExists(ifAddNewDeployableExists)) {
+        throw new Error(`Invalid ifAddNewDeployableExists input: ${ifAddNewDeployableExists}; expected one of ${Object.values(IfAddNewDeployableExists).join(', ')}`);
     }
     const version = coreExports.getInput('version', { required: true });
     const actor = coreExports.getInput('actor', { required: true });
@@ -56663,6 +56702,7 @@ const parseInputs = () => {
     const awsRegion = coreExports.getInput('awsRegion', { required: false }) ?? 'us-east-1';
     return {
         command,
+        ifAddNewDeployableExists,
         version,
         actor,
         deployables,
@@ -56680,6 +56720,7 @@ const run = async () => {
         const commandService = await buildCommandService({
             deployableTable: inputs.deployableTable,
             deployedTable: inputs.deployedTable,
+            ifAddNewDeployableExists: inputs.ifAddNewDeployableExists,
             awsRegion: inputs.awsRegion
         });
         switch (inputs.command) {

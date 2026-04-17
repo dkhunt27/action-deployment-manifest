@@ -1,10 +1,10 @@
 import * as core from '@actions/core';
-import type { ConfigService } from './config-service';
 import {
   type ConfigurationType,
   type DeployableRecordType,
   type DeployedRecordType,
-  DeploymentStatus
+  DeploymentStatus,
+  IfAddNewDeployableExists
 } from './types';
 import { setFailedAndCreateError } from './utilities';
 import type { AssertUtilities } from './utilities-assert';
@@ -12,16 +12,13 @@ import type { CommandUtilities } from './utilities-commands';
 import type { QueryUtilities } from './utilities-query';
 
 export class CommandService {
-  private readonly config: ConfigurationType;
-
   constructor(
     private readonly assertUtils: AssertUtilities,
     private readonly commandUtils: CommandUtilities,
     private readonly queryUtils: QueryUtilities,
-    configService: ConfigService
-  ) {
-    this.config = configService.config();
-  }
+    private readonly config: ConfigurationType
+  ) {}
+
   /**
    * handle new deployable (addNewDeployable, version, deployables)
    *   - assert deployable/version does not exist in deployable
@@ -42,21 +39,57 @@ export class CommandService {
       throw setFailedAndCreateError(errMsg);
     }
 
-    // assert deployable/version does not exist in deployable
-    await this.assertUtils.assertDeployableVersionDoesNotExist<DeployableRecordType>({
-      table: this.config.deployableTable,
-      version,
-      deployables
-    });
-
     // add deployable/version to deployable with status available
     for (const deployable of deployables) {
-      await this.commandUtils.putDeployableRecord({
-        deployable,
+      // check if already exists before adding
+      // TODO: this is query the ddb for each deployable, we can optimize this by doing one query for all deployables and checking in memory since we expect the number of deployables to be small
+      const exists = await this.commandUtils.checkIfDeployableVersionExists<DeployableRecordType>({
+        table: this.config.deployableTable,
         version,
-        status: DeploymentStatus.AVAILABLE,
-        actor
+        deployable
       });
+
+      // if already exists, handle based on ifAddNewDeployableExists config
+      if (exists) {
+        switch (this.config.ifAddNewDeployableExists) {
+          case IfAddNewDeployableExists.ERROR: {
+            const errMsg = `addNewDeployable error: deployable ${deployable} with version ${version} already exists in table ${this.config.deployableTable}`;
+            throw setFailedAndCreateError(errMsg);
+          }
+          case IfAddNewDeployableExists.IGNORE: {
+            core.warning(
+              `addNewDeployable warning: deployable ${deployable} with version ${version} already exists in table ${this.config.deployableTable}, skipping add`
+            );
+            continue;
+          }
+          case IfAddNewDeployableExists.OVERWRITE: {
+            core.warning(
+              `addNewDeployable warning: deployable ${deployable} with version ${version} already exists in table ${this.config.deployableTable}, overwriting record`
+            );
+            await this.commandUtils.putDeployableRecord({
+              deployable,
+              version,
+              status: DeploymentStatus.AVAILABLE,
+              actor
+            });
+            break;
+          }
+          default: {
+            const errMsg = `addNewDeployable error: invalid config for ifAddNewDeployableExists: ${this.config.ifAddNewDeployableExists}`;
+            throw setFailedAndCreateError(errMsg);
+          }
+        }
+      } else {
+        core.info(
+          `addNewDeployable info: deployable ${deployable} with version ${version} does not exist in table ${this.config.deployableTable}, adding new record`
+        );
+        await this.commandUtils.putDeployableRecord({
+          deployable,
+          version,
+          status: DeploymentStatus.AVAILABLE,
+          actor
+        });
+      }
     }
 
     core.info(`Command completed`);

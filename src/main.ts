@@ -12,6 +12,7 @@ export const run = async (): Promise<void> => {
     const commandService = await buildCommandService({
       deployableTable: inputs.deployableTable,
       deployedTable: inputs.deployedTable,
+      ifAddNewDeployableExists: inputs.ifAddNewDeployableExists,
       awsRegion: inputs.awsRegion
     });
 

@@ -1,6 +1,5 @@
 import type { PutCommandInput } from '@aws-sdk/lib-dynamodb';
 import type { AwsService } from './aws';
-import type { ConfigService } from './config-service';
 import {
   type ConfigurationType,
   type DeployableRecordType,
@@ -11,15 +10,11 @@ import { buildDeployableKey, buildDeployedKey, setFailedAndCreateError } from '.
 import type { QueryUtilities } from './utilities-query';
 
 export class CommandUtilities {
-  private readonly config: ConfigurationType;
-
   constructor(
     private readonly awsService: AwsService,
     private readonly queryUtils: QueryUtilities,
-    configService: ConfigService
-  ) {
-    this.config = configService.config();
-  }
+    private readonly config: ConfigurationType
+  ) {}
 
   getRelevantDeployableRecordsForMarkDeployed = async (params: {
     deployable: string;
@@ -216,5 +211,23 @@ export class CommandUtilities {
       const errMsg = `putDeployedRecord failure:: input: ${JSON.stringify(input)}; error: ${err}`;
       throw setFailedAndCreateError(errMsg);
     }
+  };
+
+  checkIfDeployableVersionExists = async <T extends { deployable: string }>(params: {
+    version: string;
+    deployable: string;
+    table: string;
+  }): Promise<boolean> => {
+    const { version, deployable, table } = params;
+
+    const records = await this.queryUtils.queryRecordsByVersion<T>({
+      table,
+      version
+    });
+
+    // Check if deployable exists
+    const matchingRecords = records.filter((record) => record.deployable === deployable);
+
+    return matchingRecords.length === 0;
   };
 }

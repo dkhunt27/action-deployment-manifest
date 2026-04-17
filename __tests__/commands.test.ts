@@ -1,7 +1,11 @@
 import { jest } from '@jest/globals';
 import { mock } from 'jest-mock-extended';
-import { ConfigService } from '../src/config-service';
-import { DeployableRecordType, DeployedRecordType, DeploymentStatus } from '../src/types';
+import {
+  DeployableRecordType,
+  DeployedRecordType,
+  DeploymentStatus,
+  IfAddNewDeployableExists
+} from '../src/types';
 import type { setFailedAndCreateError } from '../src/utilities';
 import type { AssertUtilities } from '../src/utilities-assert';
 import type { CommandUtilities } from '../src/utilities-commands';
@@ -9,9 +13,11 @@ import type { QueryUtilities } from '../src/utilities-query';
 
 // Mock @actions/core
 const mockInfo = jest.fn();
+const mockWarning = jest.fn();
 const mockSetFailed = jest.fn();
 jest.unstable_mockModule('@actions/core', () => ({
   info: mockInfo,
+  warning: mockWarning,
   setFailed: mockSetFailed
 }));
 
@@ -31,6 +37,13 @@ describe('CommandService', () => {
   let mockCommandUtils: jest.Mocked<CommandUtilities>;
   let mockQueryUtils: jest.Mocked<QueryUtilities>;
 
+  const createCommandService = (ifExists: IfAddNewDeployableExists) =>
+    new CommandService(mockAssertUtils, mockCommandUtils, mockQueryUtils, {
+      deployableTable: 'deployableTable',
+      deployedTable: 'deployedTable',
+      ifAddNewDeployableExists: ifExists
+    });
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2024-01-01T11:22:27Z'));
@@ -40,35 +53,30 @@ describe('CommandService', () => {
       return new Error(message);
     });
 
-    // just use the real services for these
-    const configService = new ConfigService('deployableTable', 'deployedTable');
-
     // mock these services
     mockAssertUtils = mock<AssertUtilities>();
     mockCommandUtils = mock<CommandUtilities>();
     mockQueryUtils = mock<QueryUtilities>();
 
     // Create service instance
-    commandService = new CommandService(
-      mockAssertUtils,
-      mockCommandUtils,
-      mockQueryUtils,
-      configService
-    );
+
+    // default to error for ifExists
+    commandService = createCommandService(IfAddNewDeployableExists.ERROR);
 
     // set happy path for mocks
     mockAssertUtils.assertDeployableVersionDoesNotExist.mockResolvedValue(undefined);
     mockAssertUtils.assertDeployableVersionExistsExactlyOnce.mockResolvedValue(undefined);
     mockAssertUtils.assertDeployableEnvExistsOnceAtMost.mockResolvedValue(undefined);
-    mockQueryUtils.queryRecordsByVersion.mockResolvedValue([]);
     mockCommandUtils.putDeployableRecord.mockResolvedValue(undefined);
     mockCommandUtils.putDeployedRecord.mockResolvedValue(undefined);
     mockCommandUtils.updateDeployableVersionRecordToStatus.mockResolvedValue(undefined);
     mockCommandUtils.updateDeployableRollbackRecordToDecommissioned.mockResolvedValue(undefined);
     mockCommandUtils.updateDeployableProdRecordToRollback.mockResolvedValue(undefined);
+    mockCommandUtils.checkIfDeployableVersionExists.mockResolvedValue(false);
 
     // Ensure core.info is reset to a simple mock
     mockInfo.mockImplementation(() => {});
+    mockWarning.mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -90,13 +98,6 @@ describe('CommandService', () => {
       };
     });
 
-    test('should successfully add new deployable when no existing records', async () => {
-      await commandService.addNewDeployable(params);
-
-      expect(mockCommandUtils.putDeployableRecord).toHaveBeenCalledTimes(2);
-      expect(mockCommandUtils.putDeployableRecord.mock.calls).toMatchSnapshot();
-    });
-
     test('should throw error when deployables is empty', async () => {
       params.deployables = [];
       await expect(commandService.addNewDeployable(params)).rejects.toThrow(
@@ -106,13 +107,51 @@ describe('CommandService', () => {
       expect(mockCommandUtils.putDeployableRecord).not.toHaveBeenCalled();
     });
 
-    test('should throw error when assert throws', async () => {
-      mockAssertUtils.assertDeployableVersionDoesNotExist.mockImplementation(() => {
+    test('should throw error when check throws', async () => {
+      mockCommandUtils.checkIfDeployableVersionExists.mockImplementation(() => {
         throw new Error('someError');
       });
       await expect(commandService.addNewDeployable(params)).rejects.toThrow('someError');
 
       expect(mockCommandUtils.putDeployableRecord).not.toHaveBeenCalled();
+    });
+
+    test('should successfully add new deployable when no existing records', async () => {
+      mockCommandUtils.checkIfDeployableVersionExists.mockResolvedValue(false);
+      commandService = createCommandService(IfAddNewDeployableExists.ERROR);
+      await expect(commandService.addNewDeployable(params)).resolves.toBeUndefined();
+
+      expect(mockCommandUtils.putDeployableRecord).toHaveBeenCalledTimes(2);
+      expect(mockCommandUtils.putDeployableRecord.mock.calls).toMatchSnapshot();
+    });
+
+    test('should throw error when check returns true and ifExists is error', async () => {
+      mockCommandUtils.checkIfDeployableVersionExists.mockResolvedValue(true);
+      commandService = createCommandService(IfAddNewDeployableExists.ERROR);
+
+      await expect(commandService.addNewDeployable(params)).rejects.toThrow(
+        `addNewDeployable error: deployable ${params.deployables[0]} with version ${params.version} already exists in table ${commandService['config'].deployableTable}`
+      );
+
+      expect(mockCommandUtils.putDeployableRecord).not.toHaveBeenCalled();
+    });
+
+    test('should do nothing when check returns true and ifExists is ignore', async () => {
+      mockCommandUtils.checkIfDeployableVersionExists.mockResolvedValue(true);
+      commandService = createCommandService(IfAddNewDeployableExists.IGNORE);
+
+      await expect(commandService.addNewDeployable(params)).resolves.toBeUndefined();
+
+      expect(mockCommandUtils.putDeployableRecord).not.toHaveBeenCalled();
+    });
+
+    test('should overwrite when check returns true and ifExists is overwrite', async () => {
+      mockCommandUtils.checkIfDeployableVersionExists.mockResolvedValue(true);
+      commandService = createCommandService(IfAddNewDeployableExists.OVERWRITE);
+
+      await expect(commandService.addNewDeployable(params)).resolves.toBeUndefined();
+
+      expect(mockCommandUtils.putDeployableRecord).toHaveBeenCalledTimes(2);
     });
   });
 

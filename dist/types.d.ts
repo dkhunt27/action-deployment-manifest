@@ -11,6 +11,11 @@ export declare enum DeploymentManifestCommand {
     GET_DEPLOYABLE_LIST = "getDeployableList",
     MARK_DEPLOYED = "markDeployed"
 }
+export declare enum IfAddNewDeployableExists {
+    ERROR = "error",
+    IGNORE = "ignore",
+    OVERWRITE = "overwrite"
+}
 export type DeployableRecordType = {
     id: string;
     version: string;
@@ -30,9 +35,11 @@ export type DeployedRecordType = {
 export type ConfigurationType = {
     deployableTable: string;
     deployedTable: string;
+    ifAddNewDeployableExists: IfAddNewDeployableExists;
 };
 export type DeploymentManifestInputs = {
     command: DeploymentManifestCommand;
+    ifAddNewDeployableExists: IfAddNewDeployableExists;
     version: string;
     actor: string;
     deployables?: string[];

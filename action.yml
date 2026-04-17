@@ -11,13 +11,16 @@ branding:
 # Define your inputs here.
 inputs:
   command:
-    description: 'Deployment manifest command to run'
+    description:
+      'Deployment manifest command to run. Options: "addNewDeployable", "getDeployableList",
+      "markDeployed"'
     required: true
-    options:
-      - 'addNewDeployable'
-      - 'getDeployableList'
-      - 'markDeployed'
-
+  ifAddNewDeployableExists:
+    description:
+      'Flag to indicate what to do if the new deployable exists. Options: "error" (default),
+      "ignore", "update"'
+    required: false
+    default: 'error'
   version:
     description: 'Version of the deployable to work with'
     required: true
@@ -38,7 +41,6 @@ inputs:
       '"true": deployable was deployed to production; "false": it was not (only for markDeployed
       command)'
     required: false
-
   deployableTable:
     description: 'Name of the deployable table'
     required: true
