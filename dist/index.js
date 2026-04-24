@@ -56558,7 +56558,7 @@ class CommandUtilities {
         });
         // Check if deployable exists
         const matchingRecords = records.filter((record) => record.deployable === deployable);
-        return matchingRecords.length === 0;
+        return matchingRecords.length > 0;
     };
 }
 
@@ -56714,9 +56714,8 @@ const parseInputs = () => {
     };
 };
 
-const run = async () => {
+const execute = async (inputs) => {
     try {
-        const inputs = parseInputs();
         const commandService = await buildCommandService({
             deployableTable: inputs.deployableTable,
             deployedTable: inputs.deployedTable,
@@ -56731,7 +56730,7 @@ const run = async () => {
                         deployables: inputs.deployables
                     });
                     // sort by version asc, deployable asc
-                    const sorted = lodashExports.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
+                    const sorted = _$1.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
                     const deployablesFullJson = JSON.stringify(sorted);
                     const deployablesJson = JSON.stringify(sorted.map((d) => ({ deployable: d.deployable, version: d.version })));
                     const deployablesPrettyString = deployablesJson
@@ -56777,6 +56776,16 @@ const run = async () => {
             default:
                 throw new Error(`Unhandled command: ${inputs.command}`);
         }
+    }
+    catch (error) {
+        const errMsg = `Deployment manifest execution error: ${error}`;
+        throw setFailedAndCreateError(errMsg);
+    }
+};
+const run = async () => {
+    try {
+        const inputs = parseInputs();
+        await execute(inputs);
     }
     catch (error) {
         const errMsg = `Deployment manifest processing error: ${error}`;

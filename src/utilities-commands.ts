@@ -228,6 +228,6 @@ export class CommandUtilities {
     // Check if deployable exists
     const matchingRecords = records.filter((record) => record.deployable === deployable);
 
-    return matchingRecords.length === 0;
+    return matchingRecords.length > 0;
   };
 }

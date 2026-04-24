@@ -1,14 +1,12 @@
 import * as core from '@actions/core';
 import { buildCommandService } from './factory';
 import { parseInputs } from './inputs';
-import { DeploymentManifestCommand } from './types';
+import { DeploymentManifestCommand, DeploymentManifestInputs } from './types';
 import { setFailedAndCreateError } from './utilities';
-import { orderBy as _orderBy } from 'lodash';
+import _ from 'lodash';
 
-export const run = async (): Promise<void> => {
+export const execute = async (inputs: DeploymentManifestInputs): Promise<void> => {
   try {
-    const inputs = parseInputs();
-
     const commandService = await buildCommandService({
       deployableTable: inputs.deployableTable,
       deployedTable: inputs.deployedTable,
@@ -25,7 +23,7 @@ export const run = async (): Promise<void> => {
           });
 
           // sort by version asc, deployable asc
-          const sorted = _orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
+          const sorted = _.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
 
           const deployablesFullJson = JSON.stringify(sorted);
 
@@ -79,6 +77,17 @@ export const run = async (): Promise<void> => {
       default:
         throw new Error(`Unhandled command: ${inputs.command}`);
     }
+  } catch (error) {
+    const errMsg = `Deployment manifest execution error: ${error}`;
+    throw setFailedAndCreateError(errMsg);
+  }
+};
+
+export const run = async (): Promise<void> => {
+  try {
+    const inputs = parseInputs();
+
+    await execute(inputs);
   } catch (error) {
     const errMsg = `Deployment manifest processing error: ${error}`;
     throw setFailedAndCreateError(errMsg);
