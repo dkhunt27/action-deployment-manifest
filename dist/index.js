@@ -36650,6 +36650,12 @@ class TransactionCanceledException extends DynamoDBServiceException {
     }
 }
 
+const se_BatchGetItemCommand = async (input, context) => {
+    const headers = sharedHeaders("BatchGetItem");
+    let body;
+    body = JSON.stringify(se_BatchGetItemInput(input, context));
+    return buildHttpRpcRequest$1(context, headers, "/", undefined, body);
+};
 const se_DescribeEndpointsCommand = async (input, context) => {
     const headers = sharedHeaders("DescribeEndpoints");
     let body;
@@ -36673,6 +36679,19 @@ const se_UpdateItemCommand = async (input, context) => {
     let body;
     body = JSON.stringify(se_UpdateItemInput(input, context));
     return buildHttpRpcRequest$1(context, headers, "/", undefined, body);
+};
+const de_BatchGetItemCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return de_CommandError$3(output, context);
+    }
+    const data = await parseJsonBody(output.body, context);
+    let contents = {};
+    contents = de_BatchGetItemOutput(data, context);
+    const response = {
+        $metadata: deserializeMetadata$3(output),
+        ...contents,
+    };
+    return response;
 };
 const de_DescribeEndpointsCommand = async (output, context) => {
     if (output.statusCode >= 300) {
@@ -37199,6 +37218,21 @@ const se_AttributeValueUpdate = (input, context) => {
         Value: (_) => se_AttributeValue(_, context),
     });
 };
+const se_BatchGetItemInput = (input, context) => {
+    return take(input, {
+        RequestItems: (_) => se_BatchGetRequestMap(_, context),
+        ReturnConsumedCapacity: [],
+    });
+};
+const se_BatchGetRequestMap = (input, context) => {
+    return Object.entries(input).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = se_KeysAndAttributes(value, context);
+        return acc;
+    }, {});
+};
 const se_BinarySetAttributeValue = (input, context) => {
     return input
         .filter((e) => e != null)
@@ -37264,6 +37298,22 @@ const se_KeyConditions = (input, context) => {
         acc[key] = se_Condition(value, context);
         return acc;
     }, {});
+};
+const se_KeyList = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return se_Key(entry, context);
+    });
+};
+const se_KeysAndAttributes = (input, context) => {
+    return take(input, {
+        AttributesToGet: _json,
+        ConsistentRead: [],
+        ExpressionAttributeNames: _json,
+        Keys: (_) => se_KeyList(_, context),
+        ProjectionExpression: [],
+    });
 };
 const se_ListAttributeValue = (input, context) => {
     return input
@@ -37397,6 +37447,31 @@ const de_AttributeValue = (output, context) => {
     }
     return { $unknown: Object.entries(output)[0] };
 };
+const de_BatchGetItemOutput = (output, context) => {
+    return take(output, {
+        ConsumedCapacity: (_) => de_ConsumedCapacityMultiple(_),
+        Responses: (_) => de_BatchGetResponseMap(_, context),
+        UnprocessedKeys: (_) => de_BatchGetRequestMap(_, context),
+    });
+};
+const de_BatchGetRequestMap = (output, context) => {
+    return Object.entries(output).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = de_KeysAndAttributes(value, context);
+        return acc;
+    }, {});
+};
+const de_BatchGetResponseMap = (output, context) => {
+    return Object.entries(output).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = de_ItemList(value, context);
+        return acc;
+    }, {});
+};
 const de_BinarySetAttributeValue = (output, context) => {
     const retVal = (output || [])
         .filter((e) => e != null)
@@ -37444,6 +37519,14 @@ const de_ConsumedCapacity = (output, context) => {
         WriteCapacityUnits: limitedParseDouble,
     });
 };
+const de_ConsumedCapacityMultiple = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        return de_ConsumedCapacity(entry);
+    });
+    return retVal;
+};
 const de_ItemCollectionKeyAttributeMap = (output, context) => {
     return Object.entries(output).reduce((acc, [key, value]) => {
         if (value === null) {
@@ -37483,6 +37566,23 @@ const de_Key = (output, context) => {
         acc[key] = de_AttributeValue(awsExpectUnion(value), context);
         return acc;
     }, {});
+};
+const de_KeyList = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        return de_Key(entry, context);
+    });
+    return retVal;
+};
+const de_KeysAndAttributes = (output, context) => {
+    return take(output, {
+        AttributesToGet: _json,
+        ConsistentRead: expectBoolean,
+        ExpressionAttributeNames: _json,
+        Keys: (_) => de_KeyList(_, context),
+        ProjectionExpression: expectString,
+    });
 };
 const de_ListAttributeValue = (output, context) => {
     const retVal = (output || [])
@@ -38135,6 +38235,26 @@ class DynamoDBClient extends Client {
     }
 }
 
+class BatchGetItemCommand extends Command
+    .classBuilder()
+    .ep({
+    ...commonParams$3,
+    ResourceArnList: { type: "operationContextParams", get: (input) => Object.keys(input?.RequestItems ?? {}) },
+})
+    .m(function (Command, cs, config, o) {
+    return [
+        getSerdePlugin(config, this.serialize, this.deserialize),
+        getEndpointPlugin(config, Command.getEndpointParameterInstructions()),
+    ];
+})
+    .s("DynamoDB_20120810", "BatchGetItem", {})
+    .n("DynamoDBClient", "BatchGetItemCommand")
+    .f(void 0, void 0)
+    .ser(se_BatchGetItemCommand)
+    .de(de_BatchGetItemCommand)
+    .build() {
+}
+
 class PutItemCommand extends Command
     .classBuilder()
     .ep({
@@ -38604,6 +38724,47 @@ class DynamoDBDocumentClientCommand extends Command {
             toMiddleware: "deserializerMiddleware",
             override: true,
         });
+    }
+}
+
+class BatchGetCommand extends DynamoDBDocumentClientCommand {
+    input;
+    inputKeyNodes = {
+        RequestItems: {
+            "*": {
+                Keys: {
+                    "*": ALL_VALUES,
+                },
+            },
+        },
+    };
+    outputKeyNodes = {
+        Responses: {
+            "*": {
+                "*": ALL_VALUES,
+            },
+        },
+        UnprocessedKeys: {
+            "*": {
+                Keys: {
+                    "*": ALL_VALUES,
+                },
+            },
+        },
+    };
+    clientCommand;
+    middlewareStack;
+    constructor(input) {
+        super();
+        this.input = input;
+        this.clientCommand = new BatchGetItemCommand(this.input);
+        this.middlewareStack = this.clientCommand.middlewareStack;
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.addMarshallingMiddleware(configuration);
+        const stack = clientStack.concat(this.middlewareStack);
+        const handler = this.clientCommand.resolveMiddleware(stack, configuration, options);
+        return async () => handler(this.clientCommand);
     }
 }
 
@@ -55962,6 +56123,10 @@ const buildDeployedKey = (params) => {
     return `${env}|${deployable}`;
 };
 
+// DynamoDB hard limit for keys in a single BatchGetItem request
+const MAX_BATCH_GET_KEYS = 100;
+const MAX_BATCH_GET_RETRIES = 5;
+const BATCH_GET_RETRY_DELAY_MS = 50;
 // const MAX_BATCH_WRITE_ITEMS = 25;
 // const MAX_RETRY_COUNT = 5;
 // const MAX_DELAY_TIME_IN_MS = 3000;
@@ -56041,6 +56206,39 @@ class AwsService {
                 }
             }
         } while (data.LastEvaluatedKey);
+        return items;
+    };
+    batchGetAll = async (params) => {
+        const { tableName, keys, maxRetries = MAX_BATCH_GET_RETRIES, retryDelayMs = BATCH_GET_RETRY_DELAY_MS } = params;
+        const items = [];
+        for (const chunk of _$1.chunk(keys, MAX_BATCH_GET_KEYS)) {
+            let pendingKeys = chunk;
+            let retries = 0;
+            while (pendingKeys.length > 0) {
+                const command = new BatchGetCommand({
+                    RequestItems: { [tableName]: { Keys: pendingKeys } }
+                });
+                let data;
+                try {
+                    data = await this.ddbDocClient().send(command);
+                }
+                catch (err) {
+                    const errMsg = `Could not batch get DynamoDb records; table: ${tableName}; keys: ${JSON.stringify(pendingKeys)}; error: ${err}`;
+                    throw setFailedAndCreateError(errMsg);
+                }
+                items.push(...(data.Responses?.[tableName] ?? []));
+                // DynamoDB may return a partial result under throttling; the rest come back as UnprocessedKeys
+                pendingKeys = data.UnprocessedKeys?.[tableName]?.Keys ?? [];
+                if (pendingKeys.length > 0) {
+                    retries++;
+                    if (retries > maxRetries) {
+                        const errMsg = `batchGetAll (table: ${tableName}):: ${pendingKeys.length} key(s) still unprocessed after ${maxRetries} retries: ${JSON.stringify(pendingKeys)}`;
+                        throw setFailedAndCreateError(errMsg);
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, retries * retries * retryDelayMs));
+                }
+            }
+        }
         return items;
     };
     put = async (params) => {
@@ -56165,16 +56363,25 @@ class CommandService {
      *   - assert deployable/version only has one record in deployable
      *   - if version starts with #.#.# then it is a specific version, return records with status not rejected that match version
      *   - otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
+     *   - if fallbackEnv (an env name) is set, fill in every deployable missing at version with the version deployed to that env
      */
     getDeployableList = async (params) => {
         const { version, deployables = [] } = params;
+        const fallbackEnv = params.fallbackEnv || undefined;
         try {
             let logMsg = `Getting deployable list for version ${version}`;
             logMsg +=
                 deployables.length > 0
                     ? ` restricting to deployables: ${deployables.join(', ')}`
                     : ' (all deployables)';
+            if (fallbackEnv) {
+                logMsg += ` with fallback env ${fallbackEnv}`;
+            }
             coreExports.info(logMsg);
+            // passing a version where an env belongs is the likely mix-up, so fail fast
+            if (fallbackEnv && fallbackEnv.includes('.')) {
+                throw new Error(`fallbackEnv must be an env name (e.g. "qa"), not a version: ${fallbackEnv}`);
+            }
             let records = [];
             let table = '';
             if (/^\d+\.\d+\.\d+/.test(version)) {
@@ -56187,7 +56394,8 @@ class CommandService {
                 records = data
                     .filter((item) => item.status !== 'rejected')
                     .map((item) => ({ version: item.version, deployable: item.deployable }));
-                if (deployables.length > 0) {
+                // with a fallback env, a deployable missing at version is filled in from the fallback env instead of failing
+                if (deployables.length > 0 && !fallbackEnv) {
                     // assert deployable/version only has one record in deployable
                     await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce({
                         table,
@@ -56209,13 +56417,72 @@ class CommandService {
             const filtered = deployables.length > 0
                 ? records.filter((item) => deployables.includes(item.deployable))
                 : records;
+            const result = fallbackEnv
+                ? await this.addFallbackEnvDeployables({
+                    version,
+                    fallbackEnv,
+                    deployables,
+                    records: filtered
+                })
+                : filtered;
             coreExports.info(`Command completed`);
-            return filtered;
+            return result;
         }
         catch (error) {
             const errMsg = `getDeployableList error: ${error}`;
             throw setFailedAndCreateError(errMsg);
         }
+    };
+    /**
+     * add fallback env deployables to the version records
+     *   - version records always win
+     *   - fallback env records skip the deployable table checks; they are already deployed to the fallback env so the artifact exists
+     */
+    addFallbackEnvDeployables = async (params) => {
+        const { version, fallbackEnv, deployables, records } = params;
+        const atVersion = new Set(records.map((item) => item.deployable));
+        let fallbackRecords;
+        let skipped = [];
+        if (deployables.length === 0) {
+            fallbackRecords = await this.queryUtils.queryRecordsByEnv({
+                table: this.config.deployedTable,
+                env: fallbackEnv
+            });
+            if (fallbackRecords.length === 0) {
+                coreExports.warning(`getDeployableList warning: fallback env "${fallbackEnv}" has no deployed records in table ${this.config.deployedTable}; returning only deployables at version ${version}`);
+            }
+        }
+        else {
+            const missing = [...new Set(deployables)].filter((d) => !atVersion.has(d));
+            fallbackRecords =
+                missing.length > 0
+                    ? await this.queryUtils.getDeployedRecordsByEnvAndDeployables({
+                        table: this.config.deployedTable,
+                        env: fallbackEnv,
+                        deployables: missing
+                    })
+                    : [];
+            const inFallback = new Set(fallbackRecords.map((item) => item.deployable));
+            skipped = missing.filter((d) => !inFallback.has(d));
+            for (const deployable of skipped) {
+                coreExports.warning(`${deployable}: nothing at ${version} and nothing deployed to ${fallbackEnv}`);
+            }
+            // BatchGetItem returns items in no particular order; keep the caller's order
+            fallbackRecords = missing.flatMap((d) => fallbackRecords.filter((item) => item.deployable === d));
+        }
+        const fromFallback = fallbackRecords
+            .filter((item) => !atVersion.has(item.deployable))
+            .map((item) => ({
+            version: item.version,
+            deployable: item.deployable,
+            fromEnv: fallbackEnv
+        }));
+        let summary = `getDeployableList summary: ${records.length} from version ${version}, ${fromFallback.length} from fallback env ${fallbackEnv}`;
+        if (skipped.length > 0) {
+            summary += `, ${skipped.length} skipped`;
+        }
+        coreExports.info(summary);
+        return [...records, ...fromFallback];
     };
     /**
      * handle deployed (markDeployed, version, env, deployables)
@@ -56654,6 +56921,18 @@ class QueryUtilities {
             throw setFailedAndCreateError(errMsg);
         }
     };
+    getDeployedRecordsByEnvAndDeployables = async (params) => {
+        const { table, env, deployables } = params;
+        try {
+            const keys = deployables.map((deployable) => ({ id: buildDeployedKey({ deployable, env }) }));
+            const result = await this.awsService.batchGetAll({ tableName: table, keys });
+            return (result || []);
+        }
+        catch (err) {
+            const errMsg = `getDeployedRecordsByEnvAndDeployables (table: ${table}):: could not get data for env: ${env}, deployables: ${deployables.join(', ')}; error: ${err}`;
+            throw setFailedAndCreateError(errMsg);
+        }
+    };
 }
 
 const buildCommandService = async (params) => {
@@ -56689,6 +56968,7 @@ const parseInputs = () => {
         throw new Error(`Invalid ifAddNewDeployableExists input: ${ifAddNewDeployableExists}; expected one of ${Object.values(IfAddNewDeployableExists).join(', ')}`);
     }
     const version = coreExports.getInput('version', { required: true });
+    const fallbackEnv = coreExports.getInput('fallbackEnv', { required: false }) || undefined;
     const actor = coreExports.getInput('actor', { required: true });
     const env = coreExports.getInput('env', { required: false });
     const deployedToProd = coreExports.getInput('deployedToProd', {
@@ -56704,6 +56984,7 @@ const parseInputs = () => {
         command,
         ifAddNewDeployableExists,
         version,
+        fallbackEnv,
         actor,
         deployables,
         env,
@@ -56714,6 +56995,14 @@ const parseInputs = () => {
     };
 };
 
+// with a fallback env the versions differ per deployable, so show each one and mark those taken from the fallback env
+const buildMixedVersionPrettyString = (items) => {
+    if (items.length === 0) {
+        return '[]';
+    }
+    const lines = items.map((d) => `${d.deployable}@${d.version}${d.fromEnv ? ` (from ${d.fromEnv})` : ''}`);
+    return `[\n  ${lines.join(',\n  ')}\n]`;
+};
 const execute = async (inputs) => {
     try {
         const commandService = await buildCommandService({
@@ -56725,18 +57014,23 @@ const execute = async (inputs) => {
         switch (inputs.command) {
             case DeploymentManifestCommand.GET_DEPLOYABLE_LIST:
                 {
+                    const fallbackEnv = inputs.fallbackEnv || undefined;
                     const deployableList = await commandService.getDeployableList({
                         version: inputs.version,
+                        fallbackEnv,
                         deployables: inputs.deployables
                     });
                     // sort by version asc, deployable asc
                     const sorted = _$1.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
-                    const deployablesFullJson = JSON.stringify(sorted);
+                    // fromEnv is internal; keep deployablesFull the same shape (and key order) as before fallbackEnv existed
+                    const deployablesFullJson = JSON.stringify(sorted.map((d) => ({ version: d.version, deployable: d.deployable })));
                     const deployablesJson = JSON.stringify(sorted.map((d) => ({ deployable: d.deployable, version: d.version })));
-                    const deployablesPrettyString = deployablesJson
-                        .replace(/\[\s*\{/, '[\n  {')
-                        .replace(/\}\s*\]/, '}\n]')
-                        .replace(/},\s*\{/g, '},\n  {');
+                    const deployablesPrettyString = fallbackEnv
+                        ? buildMixedVersionPrettyString(sorted)
+                        : deployablesJson
+                            .replace(/\[\s*\{/, '[\n  {')
+                            .replace(/\}\s*\]/, '}\n]')
+                            .replace(/},\s*\{/g, '},\n  {');
                     const hasDeployables = sorted.length > 0;
                     coreExports.setOutput('hasDeployables', hasDeployables);
                     coreExports.setOutput('deployables', deployablesJson);

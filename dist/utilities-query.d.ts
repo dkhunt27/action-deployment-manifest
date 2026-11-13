@@ -18,4 +18,9 @@ export declare class QueryUtilities {
         table: string;
         env: string;
     }) => Promise<T[]>;
+    getDeployedRecordsByEnvAndDeployables: <T>(params: {
+        table: string;
+        env: string;
+        deployables: string[];
+    }) => Promise<T[]>;
 }

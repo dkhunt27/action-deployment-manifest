@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import {
   type ConfigurationType,
+  type DeployableListItemType,
   type DeployableRecordType,
   type DeployedRecordType,
   DeploymentStatus,
@@ -100,19 +101,32 @@ export class CommandService {
    *   - assert deployable/version only has one record in deployable
    *   - if version starts with #.#.# then it is a specific version, return records with status not rejected that match version
    *   - otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
+   *   - if fallbackEnv (an env name) is set, fill in every deployable missing at version with the version deployed to that env
    */
   getDeployableList = async (params: {
     version: string;
+    fallbackEnv?: string;
     deployables?: string[];
-  }): Promise<{ version: string; deployable: string }[]> => {
+  }): Promise<DeployableListItemType[]> => {
     const { version, deployables = [] } = params;
+    const fallbackEnv = params.fallbackEnv || undefined;
     try {
       let logMsg = `Getting deployable list for version ${version}`;
       logMsg +=
         deployables.length > 0
           ? ` restricting to deployables: ${deployables.join(', ')}`
           : ' (all deployables)';
+      if (fallbackEnv) {
+        logMsg += ` with fallback env ${fallbackEnv}`;
+      }
       core.info(logMsg);
+
+      // passing a version where an env belongs is the likely mix-up, so fail fast
+      if (fallbackEnv && fallbackEnv.includes('.')) {
+        throw new Error(
+          `fallbackEnv must be an env name (e.g. "qa"), not a version: ${fallbackEnv}`
+        );
+      }
 
       let records: { version: string; deployable: string }[] = [];
       let table = '';
@@ -130,7 +144,8 @@ export class CommandService {
           .filter((item) => item.status !== 'rejected')
           .map((item) => ({ version: item.version, deployable: item.deployable }));
 
-        if (deployables.length > 0) {
+        // with a fallback env, a deployable missing at version is filled in from the fallback env instead of failing
+        if (deployables.length > 0 && !fallbackEnv) {
           // assert deployable/version only has one record in deployable
           await this.assertUtils.assertDeployableVersionRecordsExistsExactlyOnce({
             table,
@@ -156,13 +171,91 @@ export class CommandService {
           ? records.filter((item) => deployables.includes(item.deployable))
           : records;
 
+      const result = fallbackEnv
+        ? await this.addFallbackEnvDeployables({
+            version,
+            fallbackEnv,
+            deployables,
+            records: filtered
+          })
+        : filtered;
+
       core.info(`Command completed`);
 
-      return filtered;
+      return result;
     } catch (error) {
       const errMsg = `getDeployableList error: ${error}`;
       throw setFailedAndCreateError(errMsg);
     }
+  };
+
+  /**
+   * add fallback env deployables to the version records
+   *   - version records always win
+   *   - fallback env records skip the deployable table checks; they are already deployed to the fallback env so the artifact exists
+   */
+  private addFallbackEnvDeployables = async (params: {
+    version: string;
+    fallbackEnv: string;
+    deployables: string[];
+    records: DeployableListItemType[];
+  }): Promise<DeployableListItemType[]> => {
+    const { version, fallbackEnv, deployables, records } = params;
+    const atVersion = new Set(records.map((item) => item.deployable));
+
+    let fallbackRecords: DeployedRecordType[];
+    let skipped: string[] = [];
+
+    if (deployables.length === 0) {
+      fallbackRecords = await this.queryUtils.queryRecordsByEnv<DeployedRecordType>({
+        table: this.config.deployedTable,
+        env: fallbackEnv
+      });
+
+      if (fallbackRecords.length === 0) {
+        core.warning(
+          `getDeployableList warning: fallback env "${fallbackEnv}" has no deployed records in table ${this.config.deployedTable}; returning only deployables at version ${version}`
+        );
+      }
+    } else {
+      const missing = [...new Set(deployables)].filter((d) => !atVersion.has(d));
+
+      fallbackRecords =
+        missing.length > 0
+          ? await this.queryUtils.getDeployedRecordsByEnvAndDeployables<DeployedRecordType>({
+              table: this.config.deployedTable,
+              env: fallbackEnv,
+              deployables: missing
+            })
+          : [];
+
+      const inFallback = new Set(fallbackRecords.map((item) => item.deployable));
+      skipped = missing.filter((d) => !inFallback.has(d));
+      for (const deployable of skipped) {
+        core.warning(`${deployable}: nothing at ${version} and nothing deployed to ${fallbackEnv}`);
+      }
+
+      // BatchGetItem returns items in no particular order; keep the caller's order
+      fallbackRecords = missing.flatMap((d) =>
+        fallbackRecords.filter((item) => item.deployable === d)
+      );
+    }
+
+    const fromFallback = fallbackRecords
+      .filter((item) => !atVersion.has(item.deployable))
+      .map((item) => ({
+        version: item.version,
+        deployable: item.deployable,
+        fromEnv: fallbackEnv
+      }));
+
+    let summary = `getDeployableList summary: ${records.length} from version ${version}, ${fromFallback.length} from fallback env ${fallbackEnv}`;
+    if (skipped.length > 0) {
+      summary += `, ${skipped.length} skipped`;
+    }
+    core.info(summary);
+
+    return [...records, ...fromFallback];
   };
 
   /**

@@ -1,4 +1,4 @@
-import { type ConfigurationType } from './types';
+import { type ConfigurationType, type DeployableListItemType } from './types';
 import type { AssertUtilities } from './utilities-assert';
 import type { CommandUtilities } from './utilities-commands';
 import type { QueryUtilities } from './utilities-query';
@@ -23,14 +23,19 @@ export declare class CommandService {
      *   - assert deployable/version only has one record in deployable
      *   - if version starts with #.#.# then it is a specific version, return records with status not rejected that match version
      *   - otherwise assume version is actually an environment we want to get a list of all deployables and versions deployed there
+     *   - if fallbackEnv (an env name) is set, fill in every deployable missing at version with the version deployed to that env
      */
     getDeployableList: (params: {
         version: string;
+        fallbackEnv?: string;
         deployables?: string[];
-    }) => Promise<{
-        version: string;
-        deployable: string;
-    }[]>;
+    }) => Promise<DeployableListItemType[]>;
+    /**
+     * add fallback env deployables to the version records
+     *   - version records always win
+     *   - fallback env records skip the deployable table checks; they are already deployed to the fallback env so the artifact exists
+     */
+    private addFallbackEnvDeployables;
     /**
      * handle deployed (markDeployed, version, env, deployables)
      *   - assert deployable/version exists in deployable exactly once

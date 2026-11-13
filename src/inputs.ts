@@ -32,6 +32,7 @@ export const parseInputs = (): DeploymentManifestInputs => {
   }
 
   const version = core.getInput('version', { required: true });
+  const fallbackEnv = core.getInput('fallbackEnv', { required: false }) || undefined;
   const actor = core.getInput('actor', { required: true });
   const env = core.getInput('env', { required: false });
   const deployedToProd =
@@ -51,6 +52,7 @@ export const parseInputs = (): DeploymentManifestInputs => {
     command,
     ifAddNewDeployableExists,
     version,
+    fallbackEnv,
     actor,
     deployables,
     env,

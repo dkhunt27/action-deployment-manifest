@@ -24,6 +24,13 @@ inputs:
   version:
     description: 'Version of the deployable to work with'
     required: true
+  fallbackEnv:
+    description:
+      'Env name (e.g. "qa"), not a version. When set, every deployable with nothing at "version" is
+      taken at the version currently deployed to this env; deployables at "version" always use
+      "version". Leave empty for version-only results (only for getDeployableList command)'
+    required: false
+    default: ''
   actor:
     description: 'Actor performing the deployment action'
     required: true
