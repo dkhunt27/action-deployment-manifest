@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { mock } from 'jest-mock-extended';
+import { mock, type MockProxy } from 'jest-mock-extended';
 import type { QueryUtilities } from '../src/utilities-query';
 
 // Mock @actions/core
@@ -11,7 +11,7 @@ jest.unstable_mockModule('@actions/core', () => ({
 const { AssertUtilities } = await import('../src/utilities-assert');
 
 describe('AssertUtilities', () => {
-  let mockQueryUtils: jest.Mocked<QueryUtilities>;
+  let mockQueryUtils: MockProxy<QueryUtilities>;
   let assertUtils: InstanceType<typeof AssertUtilities>;
 
   beforeEach(() => {

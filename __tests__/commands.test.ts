@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { mock } from 'jest-mock-extended';
+import { mock, type MockProxy } from 'jest-mock-extended';
 import {
   DeployableRecordType,
   DeployedRecordType,
@@ -33,9 +33,9 @@ const { CommandService } = await import('../src/commands');
 describe('CommandService', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let commandService: any;
-  let mockAssertUtils: jest.Mocked<AssertUtilities>;
-  let mockCommandUtils: jest.Mocked<CommandUtilities>;
-  let mockQueryUtils: jest.Mocked<QueryUtilities>;
+  let mockAssertUtils: MockProxy<AssertUtilities>;
+  let mockCommandUtils: MockProxy<CommandUtilities>;
+  let mockQueryUtils: MockProxy<QueryUtilities>;
 
   const createCommandService = (ifExists: IfAddNewDeployableExists) =>
     new CommandService(mockAssertUtils, mockCommandUtils, mockQueryUtils, {
