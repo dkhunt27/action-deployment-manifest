@@ -1,5 +1,7 @@
 import { DynamoDBClient, type DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import {
+  BatchGetCommand,
+  type BatchGetCommandOutput,
   DynamoDBDocumentClient,
   PutCommand,
   type PutCommandInput,
@@ -15,6 +17,11 @@ import {
 import type { marshallOptions, unmarshallOptions } from '@aws-sdk/util-dynamodb';
 import _ from 'lodash';
 import { setFailedAndCreateError } from './utilities';
+
+// DynamoDB hard limit for keys in a single BatchGetItem request
+const MAX_BATCH_GET_KEYS = 100;
+const MAX_BATCH_GET_RETRIES = 5;
+const BATCH_GET_RETRY_DELAY_MS = 50;
 
 // const MAX_BATCH_WRITE_ITEMS = 25;
 // const MAX_RETRY_COUNT = 5;
@@ -119,6 +126,57 @@ export class AwsService {
         }
       }
     } while (data.LastEvaluatedKey);
+
+    return items;
+  };
+
+  batchGetAll = async (params: {
+    tableName: string;
+    keys: Record<string, unknown>[];
+    maxRetries?: number;
+    retryDelayMs?: number;
+  }): Promise<Record<string, unknown>[]> => {
+    const {
+      tableName,
+      keys,
+      maxRetries = MAX_BATCH_GET_RETRIES,
+      retryDelayMs = BATCH_GET_RETRY_DELAY_MS
+    } = params;
+
+    const items: Record<string, unknown>[] = [];
+
+    for (const chunk of _.chunk(keys, MAX_BATCH_GET_KEYS)) {
+      let pendingKeys = chunk;
+      let retries = 0;
+
+      while (pendingKeys.length > 0) {
+        const command = new BatchGetCommand({
+          RequestItems: { [tableName]: { Keys: pendingKeys } }
+        });
+
+        let data: BatchGetCommandOutput;
+        try {
+          data = await this.ddbDocClient().send(command);
+        } catch (err) {
+          const errMsg = `Could not batch get DynamoDb records; table: ${tableName}; keys: ${JSON.stringify(pendingKeys)}; error: ${err}`;
+          throw setFailedAndCreateError(errMsg);
+        }
+
+        items.push(...(data.Responses?.[tableName] ?? []));
+
+        // DynamoDB may return a partial result under throttling; the rest come back as UnprocessedKeys
+        pendingKeys = data.UnprocessedKeys?.[tableName]?.Keys ?? [];
+
+        if (pendingKeys.length > 0) {
+          retries++;
+          if (retries > maxRetries) {
+            const errMsg = `batchGetAll (table: ${tableName}):: ${pendingKeys.length} key(s) still unprocessed after ${maxRetries} retries: ${JSON.stringify(pendingKeys)}`;
+            throw setFailedAndCreateError(errMsg);
+          }
+          await new Promise((resolve) => setTimeout(resolve, retries * retries * retryDelayMs));
+        }
+      }
+    }
 
     return items;
   };
@@ -242,16 +300,16 @@ export class AwsService {
   //       jitter = jitter * 3;
   //     }
 
-  //     const retryIn = delayTime + jitter;
+  //     const retryDelay = delayTime + jitter;
 
   //     core.info(
   //       `batchWritePutChunk progress: ${JSON.stringify({
   //         ...progress,
-  //         retryingIn: retryIn
+  //         retryingIn: retryDelay
   //       })}`
   //     );
 
-  //     await this.delay(retryIn);
+  //     await this.delay(retryDelay);
 
   //     const retryProgress = await this.batchWritePutChunk({
   //       chunk: retryItems,

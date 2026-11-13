@@ -3,6 +3,82 @@
 This git action maintains a deployment manifest of the matrix of environments, deployables,
 versions, and statuses
 
+## Commands
+
+### `getDeployableList`
+
+Returns the deployables (and the version of each) to deploy.
+
+| Input         | Description                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`     | A version (starts with `#.#.#`): every non-rejected deployable recorded at that version. Anything else is treated as an env: every deployable deployed to that env. |
+| `fallbackEnv` | Optional. An **env name** (e.g. `qa`), not a version. Every deployable with nothing at `version` is taken at the version currently deployed to this env. See below. |
+| `deployables` | Optional comma-separated list that limits the result to those names.                                                                                                |
+
+Outputs: `deployables` (JSON array of `{ deployable, version }`), `deployablesFull`,
+`deployablesPrettyString` and `hasDeployables`.
+
+#### Bringing an env up to date with `fallbackEnv`
+
+When only the changed deployables were built at `version`, pass the env the rest should come from:
+
+```yaml
+- uses: dkhunt27/action-deployment-manifest@v3
+  id: getDeployableList
+  with:
+    command: getDeployableList
+    version: 2026.11.13-1
+    fallbackEnv: qa
+    actor: ${{ github.actor }}
+    deployableTable: my-deployable-table
+    deployedTable: my-deployed-table
+```
+
+- A deployable recorded at `version` always uses `version`, even if `qa` runs something else.
+- Every other deployable deployed to `qa` is added at the version `qa` runs. These are not
+  re-checked against the deployable table.
+- With `deployables` set, each name uses `version` if it exists there, otherwise the version
+  deployed to `qa`; a name found in neither is skipped with a warning.
+- If `qa` has no deployed records, a warning is logged and only the `version` results are returned.
+- A `fallbackEnv` that looks like a version (contains a `.`) fails the step.
+
+Items in `deployables` now carry different versions, so deploy each one at its own
+`matrix.deployableItem.version`. `deployablesPrettyString` lists each item as `name@version`,
+marking those taken from the fallback env:
+
+```text
+[
+  servicing-api@2026.11.01-3 (from qa),
+  web@2026.11.13-1
+]
+```
+
+Without `fallbackEnv`, all outputs are unchanged.
+
+### `markDeployed`
+
+Records each deployable in `deployables` as deployed to `env` at `version`, then updates its status
+in the deployable table:
+
+- `deployedToProd: true`: the current `rollback` version becomes `decommissioned`, the current
+  `prod` version becomes `rollback`, and `version` becomes `prod`.
+- Otherwise `version` becomes `pending`, but only if it is still `available`. A version that has
+  already reached `prod` (or is `rollback`, `decommissioned` or `rejected`) keeps its status, so
+  redeploying it to another env does not break the prod/rollback chain.
+
+The step fails before writing anything if `version` has no record for a deployable in the deployable
+table.
+
+## Upgrading from v2 to v3
+
+- `getDeployableList` has a new optional `fallbackEnv` input (see above). Without it, outputs are
+  unchanged.
+- `markDeployed` now fails, before writing anything, when a deployable has no record at `version`.
+  In v2 this check ran but was not awaited, so a missing record either went unnoticed or crashed the
+  step part-way through.
+- A non-prod `markDeployed` no longer changes a `prod`, `rollback`, `decommissioned` or `rejected`
+  version to `pending`.
+
 ## Testing
 
 Need to install [aws cli](https://docs.aws.amazon.com/cli/v1/userguide/install-macos.html) and

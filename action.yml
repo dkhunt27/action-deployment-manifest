@@ -24,6 +24,14 @@ inputs:
   version:
     description: 'Version of the deployable to work with'
     required: true
+  fallbackEnv:
+    description:
+      'Env name (e.g. "qa") when set, will deploy all apps/versions from this "fallbackEnv" to the
+      target "env" for every app that does not have a "version".  So this can be used to bring your
+      target "env" up to date with "fallbackEnv" while also deploying all the change apps that match
+      "version". Leave empty for version-only results (only for getDeployableList command)'
+    required: false
+    default: ''
   actor:
     description: 'Actor performing the deployment action'
     required: true

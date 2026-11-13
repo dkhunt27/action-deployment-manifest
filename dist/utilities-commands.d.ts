@@ -30,6 +30,7 @@ export declare class CommandUtilities {
         version: string;
         actor: string;
         status: DeploymentStatus;
+        onlyFromStatuses?: DeploymentStatus[];
     }) => Promise<void>;
     putDeployableRecord: (params: {
         deployable: string;

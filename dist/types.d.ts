@@ -32,6 +32,11 @@ export type DeployedRecordType = {
     deployedDate: string;
     deployedBy: string;
 };
+export type DeployableListItemType = {
+    version: string;
+    deployable: string;
+    fromEnv?: string;
+};
 export type ConfigurationType = {
     deployableTable: string;
     deployedTable: string;
@@ -41,6 +46,7 @@ export type DeploymentManifestInputs = {
     command: DeploymentManifestCommand;
     ifAddNewDeployableExists: IfAddNewDeployableExists;
     version: string;
+    fallbackEnv?: string;
     actor: string;
     deployables?: string[];
     env?: string;

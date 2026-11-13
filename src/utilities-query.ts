@@ -1,6 +1,6 @@
 import type { QueryCommandInput } from '@aws-sdk/lib-dynamodb';
 import type { AwsService } from './aws';
-import { setFailedAndCreateError } from './utilities';
+import { buildDeployedKey, setFailedAndCreateError } from './utilities';
 
 const ENV_INDEX_NAME = 'env-index';
 const VERSION_INDEX_NAME = 'version-index';
@@ -96,6 +96,23 @@ export class QueryUtilities {
       return (result || []) as T[];
     } catch (err) {
       const errMsg = `queryRecordsByEnv (table: ${table}):: could not get data for env: ${env}; error: ${err}`;
+      throw setFailedAndCreateError(errMsg);
+    }
+  };
+
+  getDeployedRecordsByEnvAndDeployables = async <T>(params: {
+    table: string;
+    env: string;
+    deployables: string[];
+  }): Promise<T[]> => {
+    const { table, env, deployables } = params;
+
+    try {
+      const keys = deployables.map((deployable) => ({ id: buildDeployedKey({ deployable, env }) }));
+      const result = await this.awsService.batchGetAll({ tableName: table, keys });
+      return (result || []) as T[];
+    } catch (err) {
+      const errMsg = `getDeployedRecordsByEnvAndDeployables (table: ${table}):: could not get data for env: ${env}, deployables: ${deployables.join(', ')}; error: ${err}`;
       throw setFailedAndCreateError(errMsg);
     }
   };

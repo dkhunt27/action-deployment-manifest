@@ -1,9 +1,24 @@
 import * as core from '@actions/core';
 import { buildCommandService } from './factory';
 import { parseInputs } from './inputs';
-import { DeploymentManifestCommand, DeploymentManifestInputs } from './types';
+import {
+  DeployableListItemType,
+  DeploymentManifestCommand,
+  DeploymentManifestInputs
+} from './types';
 import { setFailedAndCreateError } from './utilities';
 import _ from 'lodash';
+
+// with a fallback env the versions differ per deployable, so show each one and mark those taken from the fallback env
+const buildMixedVersionPrettyString = (items: DeployableListItemType[]): string => {
+  if (items.length === 0) {
+    return '[]';
+  }
+  const lines = items.map(
+    (d) => `${d.deployable}@${d.version}${d.fromEnv ? ` (from ${d.fromEnv})` : ''}`
+  );
+  return `[\n  ${lines.join(',\n  ')}\n]`;
+};
 
 export const execute = async (inputs: DeploymentManifestInputs): Promise<void> => {
   try {
@@ -17,24 +32,32 @@ export const execute = async (inputs: DeploymentManifestInputs): Promise<void> =
     switch (inputs.command) {
       case DeploymentManifestCommand.GET_DEPLOYABLE_LIST:
         {
+          const fallbackEnv = inputs.fallbackEnv || undefined;
+
           const deployableList = await commandService.getDeployableList({
             version: inputs.version,
+            fallbackEnv,
             deployables: inputs.deployables
           });
 
           // sort by version asc, deployable asc
           const sorted = _.orderBy(deployableList, ['version', 'deployable'], ['asc', 'asc']);
 
-          const deployablesFullJson = JSON.stringify(sorted);
+          // fromEnv is internal; keep deployablesFull the same shape (and key order) as before fallbackEnv existed
+          const deployablesFullJson = JSON.stringify(
+            sorted.map((d) => ({ version: d.version, deployable: d.deployable }))
+          );
 
           const deployablesJson = JSON.stringify(
             sorted.map((d) => ({ deployable: d.deployable, version: d.version }))
           );
 
-          const deployablesPrettyString = deployablesJson
-            .replace(/\[\s*\{/, '[\n  {')
-            .replace(/\}\s*\]/, '}\n]')
-            .replace(/},\s*\{/g, '},\n  {');
+          const deployablesPrettyString = fallbackEnv
+            ? buildMixedVersionPrettyString(sorted)
+            : deployablesJson
+                .replace(/\[\s*\{/, '[\n  {')
+                .replace(/\}\s*\]/, '}\n]')
+                .replace(/},\s*\{/g, '},\n  {');
 
           const hasDeployables = sorted.length > 0;
 

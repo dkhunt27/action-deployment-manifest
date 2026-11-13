@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 import type { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import type { CommandService } from '../src/commands';
 import { buildCommandService } from '../src/factory';
+import { IfAddNewDeployableExists } from '../src/types';
 
 // make sure to start localstack first `localstack start`
 // and create the tables
@@ -20,7 +21,12 @@ describe.skip('CommandService e2e tests', () => {
       region: 'us-east-1'
     };
 
-    service = await buildCommandService({ deployableTable, deployedTable, config });
+    service = await buildCommandService({
+      deployableTable,
+      deployedTable,
+      ifAddNewDeployableExists: IfAddNewDeployableExists.ERROR,
+      ddbConfig: config
+    });
   });
 
   test('simulate v1 deployed to prod', async () => {

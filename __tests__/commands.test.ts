@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { mock } from 'jest-mock-extended';
+import { mock, type MockProxy } from 'jest-mock-extended';
 import {
   DeployableRecordType,
   DeployedRecordType,
@@ -33,9 +33,9 @@ const { CommandService } = await import('../src/commands');
 describe('CommandService', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let commandService: any;
-  let mockAssertUtils: jest.Mocked<AssertUtilities>;
-  let mockCommandUtils: jest.Mocked<CommandUtilities>;
-  let mockQueryUtils: jest.Mocked<QueryUtilities>;
+  let mockAssertUtils: MockProxy<AssertUtilities>;
+  let mockCommandUtils: MockProxy<CommandUtilities>;
+  let mockQueryUtils: MockProxy<QueryUtilities>;
 
   const createCommandService = (ifExists: IfAddNewDeployableExists) =>
     new CommandService(mockAssertUtils, mockCommandUtils, mockQueryUtils, {
@@ -269,6 +269,193 @@ describe('CommandService', () => {
         ]
       `);
     });
+
+    test('should behave exactly as before when fallbackEnv is empty', async () => {
+      params = { version: '1.0.2', deployables: ['app4', 'app5'] };
+      const withoutBase = await commandService.getDeployableList(params);
+      const withEmptyBase = await commandService.getDeployableList({ ...params, fallbackEnv: '' });
+
+      expect(withEmptyBase).toEqual(withoutBase);
+      expect(mockAssertUtils.assertDeployableVersionRecordsExistsExactlyOnce).toHaveBeenCalledTimes(
+        2
+      );
+      expect(mockQueryUtils.getDeployedRecordsByEnvAndDeployables).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getDeployableList with fallbackEnv', () => {
+    const version = '2026.11.13-1';
+    const fallbackEnv = 'qa';
+
+    beforeEach(() => {
+      const versionRecords = [
+        { id: `${version}|app1`, version, deployable: 'app1', status: DeploymentStatus.AVAILABLE },
+        { id: `${version}|app2`, version, deployable: 'app2', status: DeploymentStatus.REJECTED },
+        { id: `${version}|app3`, version, deployable: 'app3', status: DeploymentStatus.PENDING }
+      ] as DeployableRecordType[];
+
+      const fallbackRecords = [
+        { id: 'qa|app1', env: 'qa', deployable: 'app1', version: '2026.11.01-3' },
+        { id: 'qa|app2', env: 'qa', deployable: 'app2', version: '2026.11.01-3' },
+        { id: 'qa|app4', env: 'qa', deployable: 'app4', version: '2026.10.30-1' }
+      ] as DeployedRecordType[];
+
+      mockQueryUtils.queryRecordsByVersion.mockResolvedValue(versionRecords);
+      mockQueryUtils.queryRecordsByEnv.mockResolvedValue(fallbackRecords);
+      mockQueryUtils.getDeployedRecordsByEnvAndDeployables.mockImplementation(
+        async ({ deployables }) =>
+          fallbackRecords.filter((r) => deployables.includes(r.deployable)) as never
+      );
+    });
+
+    describe('deployables empty', () => {
+      test('should union version records with fallback env records, version winning', async () => {
+        const result = await commandService.getDeployableList({ version, fallbackEnv });
+
+        expect(result).toEqual([
+          { version, deployable: 'app1' },
+          { version, deployable: 'app3' },
+          // app2 is rejected at version, so it falls back to what qa runs
+          { version: '2026.11.01-3', deployable: 'app2', fromEnv: 'qa' },
+          { version: '2026.10.30-1', deployable: 'app4', fromEnv: 'qa' }
+        ]);
+        expect(mockQueryUtils.queryRecordsByEnv).toHaveBeenCalledWith({
+          table: 'deployedTable',
+          env: 'qa'
+        });
+        expect(mockQueryUtils.getDeployedRecordsByEnvAndDeployables).not.toHaveBeenCalled();
+      });
+
+      test('should log a summary of version vs fallback env counts', async () => {
+        await commandService.getDeployableList({ version, fallbackEnv });
+
+        expect(mockInfo).toHaveBeenCalledWith(
+          `getDeployableList summary: 2 from version ${version}, 2 from fallback env qa`
+        );
+      });
+
+      test('should return only version records and warn when fallback env has no rows', async () => {
+        mockQueryUtils.queryRecordsByEnv.mockResolvedValue([]);
+
+        const result = await commandService.getDeployableList({ version, fallbackEnv });
+
+        expect(result).toEqual([
+          { version, deployable: 'app1' },
+          { version, deployable: 'app3' }
+        ]);
+        expect(mockWarning).toHaveBeenCalledWith(
+          expect.stringContaining('fallback env "qa" has no deployed records')
+        );
+      });
+
+      test('should return fallback env records when nothing exists at version', async () => {
+        mockQueryUtils.queryRecordsByVersion.mockResolvedValue([]);
+
+        const result = await commandService.getDeployableList({ version, fallbackEnv });
+
+        expect(result).toEqual([
+          { version: '2026.11.01-3', deployable: 'app1', fromEnv: 'qa' },
+          { version: '2026.11.01-3', deployable: 'app2', fromEnv: 'qa' },
+          { version: '2026.10.30-1', deployable: 'app4', fromEnv: 'qa' }
+        ]);
+      });
+    });
+
+    describe('deployables given', () => {
+      test('should take each name from version, else fallback env, else skip and log', async () => {
+        const result = await commandService.getDeployableList({
+          version,
+          fallbackEnv,
+          deployables: ['app1', 'app4', 'app9', 'app2']
+        });
+
+        expect(result).toEqual([
+          { version, deployable: 'app1' },
+          { version: '2026.10.30-1', deployable: 'app4', fromEnv: 'qa' },
+          { version: '2026.11.01-3', deployable: 'app2', fromEnv: 'qa' }
+        ]);
+        expect(mockQueryUtils.getDeployedRecordsByEnvAndDeployables).toHaveBeenCalledWith({
+          table: 'deployedTable',
+          env: 'qa',
+          deployables: ['app4', 'app9', 'app2']
+        });
+        expect(mockWarning).toHaveBeenCalledWith(
+          `app9: nothing at ${version} and nothing deployed to qa`
+        );
+        expect(mockInfo).toHaveBeenCalledWith(
+          `getDeployableList summary: 1 from version ${version}, 2 from fallback env qa, 1 skipped`
+        );
+      });
+
+      test('should not require every name to exist at version', async () => {
+        await commandService.getDeployableList({
+          version,
+          fallbackEnv,
+          deployables: ['app4']
+        });
+
+        expect(
+          mockAssertUtils.assertDeployableVersionRecordsExistsExactlyOnce
+        ).not.toHaveBeenCalled();
+      });
+
+      test('should not look up fallback env when every name exists at version', async () => {
+        const result = await commandService.getDeployableList({
+          version,
+          fallbackEnv,
+          deployables: ['app1', 'app3']
+        });
+
+        expect(result).toEqual([
+          { version, deployable: 'app1' },
+          { version, deployable: 'app3' }
+        ]);
+        expect(mockQueryUtils.getDeployedRecordsByEnvAndDeployables).not.toHaveBeenCalled();
+        expect(mockQueryUtils.queryRecordsByEnv).not.toHaveBeenCalled();
+      });
+
+      test('should look up duplicate names once', async () => {
+        await commandService.getDeployableList({
+          version,
+          fallbackEnv,
+          deployables: ['app4', 'app4']
+        });
+
+        expect(mockQueryUtils.getDeployedRecordsByEnvAndDeployables).toHaveBeenCalledWith(
+          expect.objectContaining({ deployables: ['app4'] })
+        );
+      });
+
+      test('should skip every name and warn when fallback env has none of them', async () => {
+        mockQueryUtils.getDeployedRecordsByEnvAndDeployables.mockResolvedValue([]);
+
+        const result = await commandService.getDeployableList({
+          version,
+          fallbackEnv,
+          deployables: ['app4', 'app9']
+        });
+
+        expect(result).toEqual([]);
+        expect(mockWarning).toHaveBeenCalledWith(
+          `app4: nothing at ${version} and nothing deployed to qa`
+        );
+        expect(mockWarning).toHaveBeenCalledWith(
+          `app9: nothing at ${version} and nothing deployed to qa`
+        );
+      });
+    });
+
+    test.each(['2026.11.01-3', '1.0.0', 'qa.v2'])(
+      'should fail fast when fallbackEnv looks like a version (%s)',
+      async (badEnv) => {
+        await expect(
+          commandService.getDeployableList({ version, fallbackEnv: badEnv })
+        ).rejects.toThrow(`fallbackEnv must be an env name (e.g. "qa"), not a version: ${badEnv}`);
+
+        expect(mockQueryUtils.queryRecordsByVersion).not.toHaveBeenCalled();
+        expect(mockQueryUtils.queryRecordsByEnv).not.toHaveBeenCalled();
+      }
+    );
   });
 
   describe('markDeployed', () => {
@@ -371,6 +558,55 @@ describe('CommandService', () => {
       await expect(commandService.markDeployed(params)).rejects.toThrow('markDeployed error');
 
       expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
+    });
+
+    test('should not write anything when assertDeployableVersionExistsExactlyOnce rejects', async () => {
+      mockAssertUtils.assertDeployableVersionExistsExactlyOnce.mockRejectedValue(
+        new Error('no record found for version')
+      );
+
+      await expect(commandService.markDeployed(params)).rejects.toThrow(
+        'no record found for version'
+      );
+
+      expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
+      expect(mockCommandUtils.updateDeployableVersionRecordToStatus).not.toHaveBeenCalled();
+    });
+
+    test('should not write anything when assertDeployableEnvExistsOnceAtMost rejects', async () => {
+      mockAssertUtils.assertDeployableEnvExistsOnceAtMost.mockRejectedValue(
+        new Error('multiple records found for env')
+      );
+
+      await expect(commandService.markDeployed(params)).rejects.toThrow(
+        'multiple records found for env'
+      );
+
+      expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
+      expect(mockCommandUtils.updateDeployableVersionRecordToStatus).not.toHaveBeenCalled();
+    });
+
+    test('should only promote available records to pending on non-prod deploy', async () => {
+      await commandService.markDeployed(params);
+
+      expect(mockCommandUtils.updateDeployableVersionRecordToStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: DeploymentStatus.PENDING,
+          onlyFromStatuses: [DeploymentStatus.AVAILABLE]
+        })
+      );
+    });
+
+    test('should set prod regardless of current status on prod deploy', async () => {
+      params.env = 'prod';
+      params.deployedToProd = true;
+
+      await commandService.markDeployed(params);
+
+      for (const [call] of mockCommandUtils.updateDeployableVersionRecordToStatus.mock.calls) {
+        expect(call.status).toBe(DeploymentStatus.PROD);
+        expect(call.onlyFromStatuses).toBeUndefined();
+      }
     });
 
     test('should throw error when putDeployedRecord fails', async () => {

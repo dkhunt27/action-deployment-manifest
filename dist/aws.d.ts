@@ -15,6 +15,12 @@ export declare class AwsService {
     getAllQueryItems: (params: {
         input: QueryCommandInput;
     }) => Promise<Record<string, unknown>[]>;
+    batchGetAll: (params: {
+        tableName: string;
+        keys: Record<string, unknown>[];
+        maxRetries?: number;
+        retryDelayMs?: number;
+    }) => Promise<Record<string, unknown>[]>;
     put: (params: {
         input: PutCommandInput;
         ignoreConditionExpressionFailedException?: boolean;

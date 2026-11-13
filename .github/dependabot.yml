@@ -14,6 +14,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Keep Node types in line with the action runtime (action.yml `using: node24`)
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
+      # ts-jest and jest-mock-extended don't support TypeScript 7 yet (peer: <7 / ^6)
+      - dependency-name: typescript
+        versions:
+          - '>=7'
     groups:
       npm-development:
         dependency-type: development
