@@ -41,7 +41,7 @@ export class AssertUtilities {
       version
     });
 
-    this.assertDeployableVersionRecordsExistsExactlyOnce({
+    await this.assertDeployableVersionRecordsExistsExactlyOnce({
       records,
       version,
       deployables,

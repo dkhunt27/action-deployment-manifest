@@ -23,7 +23,7 @@ Outputs: `deployables` (JSON array of `{ deployable, version }`), `deployablesFu
 When only the changed deployables were built at `version`, pass the env the rest should come from:
 
 ```yaml
-- uses: dkhunt27/action-deployment-manifest@v2.1.0
+- uses: dkhunt27/action-deployment-manifest@v3
   id: getDeployableList
   with:
     command: getDeployableList
@@ -54,6 +54,30 @@ marking those taken from the fallback env:
 ```
 
 Without `fallbackEnv`, all outputs are unchanged.
+
+### `markDeployed`
+
+Records each deployable in `deployables` as deployed to `env` at `version`, then updates its status
+in the deployable table:
+
+- `deployedToProd: true`: the current `rollback` version becomes `decommissioned`, the current
+  `prod` version becomes `rollback`, and `version` becomes `prod`.
+- Otherwise `version` becomes `pending`, but only if it is still `available`. A version that has
+  already reached `prod` (or is `rollback`, `decommissioned` or `rejected`) keeps its status, so
+  redeploying it to another env does not break the prod/rollback chain.
+
+The step fails before writing anything if `version` has no record for a deployable in the deployable
+table.
+
+## Upgrading from v2 to v3
+
+- `getDeployableList` has a new optional `fallbackEnv` input (see above). Without it, outputs are
+  unchanged.
+- `markDeployed` now fails, before writing anything, when a deployable has no record at `version`.
+  In v2 this check ran but was not awaited, so a missing record either went unnoticed or crashed the
+  step part-way through.
+- A non-prod `markDeployed` no longer changes a `prod`, `rollback`, `decommissioned` or `rejected`
+  version to `pending`.
 
 ## Testing
 

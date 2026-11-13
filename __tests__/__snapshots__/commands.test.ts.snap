@@ -49,6 +49,9 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
       "actor": "test-user",
       "deployable": "app1",
       "deployableTable": "deployableTable",
+      "onlyFromStatuses": [
+        "available",
+      ],
       "records": [
         {
           "deployable": "app1",
@@ -76,6 +79,9 @@ exports[`CommandService markDeployed should successfully mark deployed to non-pr
       "actor": "test-user",
       "deployable": "app2",
       "deployableTable": "deployableTable",
+      "onlyFromStatuses": [
+        "available",
+      ],
       "records": [
         {
           "deployable": "app1",

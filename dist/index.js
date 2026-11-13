@@ -56507,13 +56507,13 @@ class CommandService {
                     : ' (all deployables)';
             coreExports.info(logMsg);
             // assert deployable/version exists in deployable exactly once
-            this.assertUtils.assertDeployableVersionExistsExactlyOnce({
+            await this.assertUtils.assertDeployableVersionExistsExactlyOnce({
                 table: this.config.deployableTable,
                 version,
                 deployables
             });
             // assert deployable/env exists in deployed no more than once
-            this.assertUtils.assertDeployableEnvExistsOnceAtMost({
+            await this.assertUtils.assertDeployableEnvExistsOnceAtMost({
                 env,
                 deployables,
                 table: this.config.deployedTable
@@ -56566,11 +56566,14 @@ class CommandService {
                 }
                 else {
                     // if deployedToProd is not true, update deployable
-                    // find deployable/version set status to "pending"
+                    // find deployable/version set status to "pending", but only if it is still "available";
+                    // a version that already reached prod (or rollback/decommissioned/rejected) keeps its status,
+                    // otherwise redeploying it to another env would break the prod -> rollback chain
                     await this.commandUtils.updateDeployableVersionRecordToStatus({
                         deployableTable: this.config.deployableTable,
                         records: deployableRecords,
                         status: DeploymentStatus.PENDING,
+                        onlyFromStatuses: [DeploymentStatus.AVAILABLE],
                         deployable,
                         version,
                         actor
@@ -56612,7 +56615,7 @@ class AssertUtilities {
             table,
             version
         });
-        this.assertDeployableVersionRecordsExistsExactlyOnce({
+        await this.assertDeployableVersionRecordsExistsExactlyOnce({
             records,
             version,
             deployables,
@@ -56747,7 +56750,7 @@ class CommandUtilities {
         }
     };
     updateDeployableVersionRecordToStatus = async (params) => {
-        const { records, deployable, version, deployableTable, actor, status } = params;
+        const { records, deployable, version, deployableTable, actor, status, onlyFromStatuses } = params;
         // Find records with rollback status for this deployable and update to decommissioned
         const versionRecords = records.filter((record) => record.version === version);
         if (versionRecords.length > 1) {
@@ -56756,6 +56759,10 @@ class CommandUtilities {
         }
         for (const record of versionRecords) {
             // this loop will only run once since we asserted above only one record exists or none if no records
+            if (onlyFromStatuses && !onlyFromStatuses.includes(record.status)) {
+                coreExports.info(`updateDeployableVersionRecordToStatus: deployable ${deployable} / version ${version} keeps status ${record.status} (only ${onlyFromStatuses.join(', ')} is changed to ${status})`);
+                continue;
+            }
             await this.awsService.update({
                 input: {
                     TableName: deployableTable,

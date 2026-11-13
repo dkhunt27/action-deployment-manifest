@@ -560,6 +560,55 @@ describe('CommandService', () => {
       expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
     });
 
+    test('should not write anything when assertDeployableVersionExistsExactlyOnce rejects', async () => {
+      mockAssertUtils.assertDeployableVersionExistsExactlyOnce.mockRejectedValue(
+        new Error('no record found for version')
+      );
+
+      await expect(commandService.markDeployed(params)).rejects.toThrow(
+        'no record found for version'
+      );
+
+      expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
+      expect(mockCommandUtils.updateDeployableVersionRecordToStatus).not.toHaveBeenCalled();
+    });
+
+    test('should not write anything when assertDeployableEnvExistsOnceAtMost rejects', async () => {
+      mockAssertUtils.assertDeployableEnvExistsOnceAtMost.mockRejectedValue(
+        new Error('multiple records found for env')
+      );
+
+      await expect(commandService.markDeployed(params)).rejects.toThrow(
+        'multiple records found for env'
+      );
+
+      expect(mockCommandUtils.putDeployedRecord).not.toHaveBeenCalled();
+      expect(mockCommandUtils.updateDeployableVersionRecordToStatus).not.toHaveBeenCalled();
+    });
+
+    test('should only promote available records to pending on non-prod deploy', async () => {
+      await commandService.markDeployed(params);
+
+      expect(mockCommandUtils.updateDeployableVersionRecordToStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: DeploymentStatus.PENDING,
+          onlyFromStatuses: [DeploymentStatus.AVAILABLE]
+        })
+      );
+    });
+
+    test('should set prod regardless of current status on prod deploy', async () => {
+      params.env = 'prod';
+      params.deployedToProd = true;
+
+      await commandService.markDeployed(params);
+
+      for (const [call] of mockCommandUtils.updateDeployableVersionRecordToStatus.mock.calls) {
+        expect(call.status).toBe(DeploymentStatus.PROD);
+        expect(call.onlyFromStatuses).toBeUndefined();
+      }
+    });
+
     test('should throw error when putDeployedRecord fails', async () => {
       mockCommandUtils.putDeployedRecord.mockRejectedValue(new Error('Database error'));
 

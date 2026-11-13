@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import type { PutCommandInput } from '@aws-sdk/lib-dynamodb';
 import type { AwsService } from './aws';
 import {
@@ -121,8 +122,11 @@ export class CommandUtilities {
     version: string;
     actor: string;
     status: DeploymentStatus;
+    // when given, only a record currently in one of these statuses is changed
+    onlyFromStatuses?: DeploymentStatus[];
   }): Promise<void> => {
-    const { records, deployable, version, deployableTable, actor, status } = params;
+    const { records, deployable, version, deployableTable, actor, status, onlyFromStatuses } =
+      params;
 
     // Find records with rollback status for this deployable and update to decommissioned
     const versionRecords = records.filter((record) => record.version === version);
@@ -134,6 +138,13 @@ export class CommandUtilities {
 
     for (const record of versionRecords) {
       // this loop will only run once since we asserted above only one record exists or none if no records
+      if (onlyFromStatuses && !onlyFromStatuses.includes(record.status)) {
+        core.info(
+          `updateDeployableVersionRecordToStatus: deployable ${deployable} / version ${version} keeps status ${record.status} (only ${onlyFromStatuses.join(', ')} is changed to ${status})`
+        );
+        continue;
+      }
+
       await this.awsService.update({
         input: {
           TableName: deployableTable,

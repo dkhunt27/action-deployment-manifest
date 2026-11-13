@@ -289,14 +289,14 @@ export class CommandService {
       core.info(logMsg);
 
       // assert deployable/version exists in deployable exactly once
-      this.assertUtils.assertDeployableVersionExistsExactlyOnce<DeployableRecordType>({
+      await this.assertUtils.assertDeployableVersionExistsExactlyOnce<DeployableRecordType>({
         table: this.config.deployableTable,
         version,
         deployables
       });
 
       // assert deployable/env exists in deployed no more than once
-      this.assertUtils.assertDeployableEnvExistsOnceAtMost<DeployedRecordType>({
+      await this.assertUtils.assertDeployableEnvExistsOnceAtMost<DeployedRecordType>({
         env,
         deployables,
         table: this.config.deployedTable
@@ -356,11 +356,14 @@ export class CommandService {
           });
         } else {
           // if deployedToProd is not true, update deployable
-          // find deployable/version set status to "pending"
+          // find deployable/version set status to "pending", but only if it is still "available";
+          // a version that already reached prod (or rollback/decommissioned/rejected) keeps its status,
+          // otherwise redeploying it to another env would break the prod -> rollback chain
           await this.commandUtils.updateDeployableVersionRecordToStatus({
             deployableTable: this.config.deployableTable,
             records: deployableRecords,
             status: DeploymentStatus.PENDING,
+            onlyFromStatuses: [DeploymentStatus.AVAILABLE],
             deployable,
             version,
             actor
