@@ -300,16 +300,16 @@ export class AwsService {
   //       jitter = jitter * 3;
   //     }
 
-  //     const retryIn = delayTime + jitter;
+  //     const retryDelay = delayTime + jitter;
 
   //     core.info(
   //       `batchWritePutChunk progress: ${JSON.stringify({
   //         ...progress,
-  //         retryingIn: retryIn
+  //         retryingIn: retryDelay
   //       })}`
   //     );
 
-  //     await this.delay(retryIn);
+  //     await this.delay(retryDelay);
 
   //     const retryProgress = await this.batchWritePutChunk({
   //       chunk: retryItems,
